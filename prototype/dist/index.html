@@ -1,0 +1,1791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiftwell Swap-Rules Engine (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Theme Variables (Inspired by reference UI) ── */
+:root {
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  
+  /* Brand Pink / Magenta from reference */
+  --brand-pink: #FF1E82;
+  --brand-pink-hover: #E0136E;
+  --brand-pink-subtle: #FFF0F6;
+  --brand-pink-border: #FFD6E7;
+  
+  /* Soft pink ambient outer backdrop gradient */
+  --outer-bg: radial-gradient(circle at 50% 15%, #fcd6e5 0%, #fad1e8 30%, #edd4ee 65%, #fbe1ed 100%);
+  
+  /* App surfaces */
+  --app-bg: #FFFFFF;
+  --sidebar-bg: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --card-border: #F1F3F5;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 4px 14px rgba(0,0,0,0.03);
+  --card-hover-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  
+  --ink: #111827;
+  --muted: #6B7280;
+  --light-gray: #9CA3AF;
+  --border-line: #E5E7EB;
+  --border-light: #F9FAFB;
+  
+  /* Semantic Status Badges */
+  --green-bg: #DEF7EC;
+  --green-ink: #03543F;
+  --red-bg: #FDE8E8;
+  --red-ink: #9B1C1C;
+  --blue-bg: #E1EFFE;
+  --blue-ink: #1E429F;
+  --yellow-bg: #FEF08A;
+  --yellow-ink: #854D0E;
+  --orange-bg: #FFEDD5;
+  --orange-ink: #9A3412;
+  
+  --radius-app: 22px;
+  --radius-card: 14px;
+  --radius-btn: 8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { min-height: 100%; }
+body {
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--outer-bg);
+  min-height: 100vh;
+  padding: 24px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select { font: inherit; }
+ul { list-style: none; }
+a { color: var(--brand-pink); text-decoration: none; }
+
+/* ── App Shell Container (Floating SaaS Dashboard Frame) ── */
+.app-container {
+  width: 100%;
+  max-width: 1400px;
+  background: var(--app-bg);
+  border-radius: var(--radius-app);
+  box-shadow: 0 20px 60px rgba(220, 100, 150, 0.16), 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  overflow: hidden;
+  min-height: 900px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  position: relative;
+}
+
+/* ── Sidebar (Reference Layout) ── */
+.sidebar {
+  width: 250px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid #F1F3F5;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sidebar-header {
+  height: 72px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F8F9FA;
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-sq {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--brand-pink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(255, 30, 130, 0.3);
+}
+
+.logo-title {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.logo-toggle-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--light-gray);
+  padding: 12px 10px 4px;
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Account selection buttons (tested by .tab) */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all .15s;
+  text-align: left;
+}
+.tab:hover {
+  background: #F8F9FA;
+  color: var(--ink);
+}
+.tab[aria-selected="true"] {
+  background: var(--brand-pink-subtle);
+  color: var(--brand-pink);
+  font-weight: 600;
+  border: 1px solid var(--brand-pink-border);
+}
+
+/* Scenarios list in sidebar */
+.scen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.scen-list::-webkit-scrollbar { width: 4px; }
+.scen-list::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+
+.scen {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: var(--ink);
+  transition: all .15s;
+}
+.scen:hover { background: #F8F9FA; border-color: #E5E7EB; }
+.scen[aria-pressed="true"] {
+  background: var(--brand-pink-subtle);
+  border-color: var(--brand-pink);
+  color: var(--brand-pink);
+}
+.scen strong { display: block; font-size: 12px; font-weight: 600; }
+.scen small { display: block; font-size: 10.5px; color: var(--muted); }
+
+/* Floating Upgrade / Engine Status Card (From Reference Mockup) */
+.upgrade-card {
+  margin: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FFF6FA 0%, #FFFFFF 100%);
+  border: 1px solid #FFE4F0;
+  box-shadow: 0 4px 14px rgba(255, 30, 130, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.upgrade-icon-sq {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF1E82 0%, #FF65A5 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 3px 8px rgba(255, 30, 130, 0.25);
+  flex-shrink: 0;
+}
+.upgrade-info h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.upgrade-info p {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sidebar-footer {
+  padding: 12px 14px 16px;
+  border-top: 1px solid #F8F9FA;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.disclaimer-box {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.disclaimer-box strong { display: block; font-size: 10.5px; margin-bottom: 2px; }
+
+/* ── Main Content Area ── */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #FAFBFD;
+}
+
+/* Top bar (Exact Reference Style) */
+.topbar {
+  height: 72px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F1F3F5;
+  flex-shrink: 0;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.topbar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.badge-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #F0F7FF;
+  color: #1D4ED8;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-switch-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all .15s;
+}
+.btn-switch-account:hover {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+.btn-new-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-btn);
+  background: var(--brand-pink);
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(255, 30, 130, 0.28);
+  transition: all .15s;
+}
+.btn-new-project:hover {
+  background: var(--brand-pink-hover);
+  box-shadow: 0 5px 14px rgba(255, 30, 130, 0.38);
+}
+
+/* ── Content Grid ── */
+.content-body {
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Row 1: 4 Stat Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform .15s, box-shadow .15s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+}
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.stat-card-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.stat-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.stat-card-metric-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.stat-card-number {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.badge-trend {
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-trend.positive { background: var(--green-bg); color: var(--green-ink); }
+.badge-trend.negative { background: var(--red-bg); color: var(--red-ink); }
+.badge-trend.neutral { background: #F3F4F6; color: #4B5563; }
+.stat-card-sub {
+  font-size: 11.5px;
+  color: var(--light-gray);
+}
+
+/* Panels */
+.panel-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pill-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pill-btn:hover { background: #F9FAFB; border-color: #D1D5DB; }
+
+/* ── Evaluation Result (Left 1.6fr) & Account Policy (Right 1fr) ── */
+.row-evaluation-policy {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+}
+
+/* Status Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .02em;
+}
+.s-BLOCKED, .s-DENIED, .s-REJECTED { background: var(--red-bg); color: var(--red-ink); }
+.s-ESCALATED { background: var(--orange-bg); color: var(--orange-ink); }
+.s-MANAGER_REVIEW { background: var(--blue-bg); color: var(--blue-ink); }
+.s-AUTO_APPROVED, .s-ALLOWED, .s-APPROVED { background: var(--green-bg); color: var(--green-ink); }
+.s-READY_FOR_MANAGER { background: #F3F4F6; color: #374151; }
+
+.finding {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #F3F4F6;
+  font-size: 12.5px;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+.finding:first-child { border-top: none; }
+.tag {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  min-width: 74px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.t-PASS { color: var(--green-ink); background: var(--green-bg); }
+.t-BLOCK { color: var(--red-ink); background: var(--red-bg); }
+.t-ESCALATE { color: var(--orange-ink); background: var(--orange-bg); }
+.t-REVIEW { color: var(--blue-ink); background: var(--blue-bg); }
+
+/* Hours progress bar */
+.bar {
+  height: 16px;
+  border-radius: 999px;
+  background: #F3F4F6;
+  position: relative;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3B82F6, var(--brand-pink));
+  transition: width .4s ease;
+}
+.bar.over > i { background: linear-gradient(90deg, #F97316, #EF4444); }
+.cap {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2.5px;
+  background: #111827;
+  border-radius: 2px;
+}
+
+/* Actions buttons */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+button.act {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  transition: all .15s;
+}
+button.act:hover { border-color: var(--brand-pink); color: var(--brand-pink); }
+button.act.primary {
+  background: var(--brand-pink);
+  color: #FFFFFF;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(255, 30, 130, 0.25);
+}
+button.act.primary:hover { background: var(--brand-pink-hover); color: #fff; }
+button.act.danger {
+  border-color: #F87171;
+  color: #DC2626;
+}
+button.act.danger:hover { background: #FEF2F2; }
+
+input[type=text] {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+input[type=text]:focus {
+  outline: none;
+  border-color: var(--brand-pink);
+  box-shadow: 0 0 0 3px rgba(255, 30, 130, 0.1);
+}
+
+.msg {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.msg.bad { background: var(--red-bg); color: var(--red-ink); }
+.msg.good { background: var(--green-bg); color: var(--green-ink); }
+
+/* 2x2 Metric Grid inside Policy Card */
+.policy-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #F3F4F6;
+}
+.policy-metric-box {
+  background: #FAFBFD;
+  border: 1px solid #F1F3F5;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.policy-metric-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.policy-metric-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.policy-metric-sub {
+  font-size: 10px;
+  color: var(--light-gray);
+}
+
+/* Row: Audit Log & Account Breakdown */
+.row-audit-breakdown {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+}
+
+/* Demographic / Policy Breakdown Progress Bars */
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.breakdown-label {
+  width: 90px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.breakdown-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.breakdown-bar-inner {
+  height: 100%;
+  border-radius: 4px;
+}
+.breakdown-val {
+  width: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+.breakdown-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #057A55;
+  background: var(--green-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Table styling for Audit Log & Reproducibility */
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #F3F4F6; vertical-align: top; }
+th {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: #F9FAFB;
+}
+tbody tr:hover { background: #FFF5F9; }
+.rule { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 12.5px; padding: 12px 0; }
+.ok { color: #057A55; font-weight: 700; }
+.no { color: #DC2626; font-weight: 700; }
+
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 500; }
+pre {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 10px;
+  overflow: auto;
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-top: 6px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .row-evaluation-policy { grid-template-columns: 1fr; }
+  .row-audit-breakdown { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  body { padding: 0; }
+  .app-container { border-radius: 0; min-height: 100vh; flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #E5E7EB; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .content-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ── Left Sidebar (Matching Reference Aesthetics) ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-wrap">
+        <div class="logo-sq">S</div>
+        <div class="logo-title">Shiftwell</div>
+      </div>
+      <div class="logo-toggle-icon" title="Swap Rules Prototype">◫</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-title">Client Accounts</div>
+      <div id="tabs" class="tab-group" role="tablist" aria-label="Account"></div>
+
+      <div class="nav-section-title">Test Scenarios</div>
+      <div id="scenarios" class="scen-list"></div>
+    </div>
+
+    <!-- Status Card (from reference Upgrade card) -->
+    <div class="upgrade-card">
+      <div class="upgrade-icon-sq">🛡️</div>
+      <div class="upgrade-info">
+        <h4>Compliance Engine</h4>
+        <p>Zero Unverified Swaps</p>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <!-- Disclaimer required by tests -->
+      <div id="disclaimer" class="disclaimer-box">
+        <strong>⚠ Synthetic data. Not a production compliance system.</strong>
+        All people, credentials, dates, locations and approvers are invented for this demo. Scenarios are fixed so results are reproducible.
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Dashboard Workspace ── -->
+  <main class="main-wrapper">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Swap-Rules Engine Overview</h1>
+        <div class="badge-updated">
+          <span>🔄</span>
+          <span>DETERMINISTIC EVALUATION</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-switch-account" id="switchAccountBtn">
+          <span>⚙️</span>
+          <span>Switch Account</span>
+        </button>
+        <button class="btn-new-project" id="runAll">
+          <span>▶</span>
+          <span>Run All 25 Scenarios</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content-body">
+      <!-- ── Row 1: 4 Stat Cards for Shiftwell ── -->
+      <div class="stats-grid" id="statsCards"></div>
+
+      <!-- ── Row 2: Active Scenario Evaluation & Policy Summary ── -->
+      <div class="row-evaluation-policy">
+        <!-- Result Card (Tested by smoke tests) -->
+        <div class="panel-card" id="resultCard">
+          <div class="panel-header">
+            <h3 class="panel-title">Evaluation Result</h3>
+          </div>
+          <p class="empty">Choose a scenario on the left to run the rules engine.</p>
+        </div>
+
+        <!-- Account Policy Card (Tested by smoke tests) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Account Policy & Enforcement</h3>
+          </div>
+          <p class="stat-card-sub" id="policySource" style="margin-bottom: 10px; color: var(--ink); font-weight: 500;"></p>
+          <ul id="policySummary" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;"></ul>
+
+          <div class="policy-metrics-grid">
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Execution Speed</div>
+              <div class="policy-metric-val">&lt; 1ms</div>
+              <div class="policy-metric-sub">Pure deterministic logic</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Audit Logging</div>
+              <div class="policy-metric-val">100%</div>
+              <div class="policy-metric-sub">Immutable UTC ledger</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Override Control</div>
+              <div class="policy-metric-val">Strict</div>
+              <div class="policy-metric-sub">Hard block cannot be approved</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Scope Rule</div>
+              <div class="policy-metric-val">Cross-Store</div>
+              <div class="policy-metric-sub">Hours sum across locations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Row 3: Audit Log Table & Policy Rule Distribution ── -->
+      <div class="row-audit-breakdown">
+        <!-- Live Audit Log Table -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Immutable Audit Log</h3>
+            <button class="pill-btn" id="clearLog">Clear Log</button>
+          </div>
+          <div class="tablewrap">
+            <table id="logTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Timestamp (UTC)</th>
+                  <th>Account</th>
+                  <th>Event</th>
+                  <th>Outcome</th>
+                  <th>Rule</th>
+                  <th>Reason</th>
+                  <th>Actor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="empty" id="logEmpty">No decisions logged yet. Select a scenario on the left.</p>
+        </div>
+
+        <!-- Rule Distribution (styled like reference Quiz Overview) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Policy Enforcement Matrix</h3>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">CarePoint</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 100%; background: #FF1E82;"></div></div>
+            <span class="breakdown-val">Hard Block</span>
+            <span class="breakdown-badge">Cert Expiry</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">FreshBowl</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 85%; background: #10B981;"></div></div>
+            <span class="breakdown-val">Auto-Approve</span>
+            <span class="breakdown-badge">All Passes</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">UrbanMart</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 70%; background: #F59E0B;"></div></div>
+            <span class="breakdown-val">48h Escalate</span>
+            <span class="breakdown-badge">Multi-Store</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">Role Check</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 90%; background: #3B82F6;"></div></div>
+            <span class="breakdown-val">Strict</span>
+            <span class="breakdown-badge">Qualified</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">Roster Valid</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 95%; background: #8B5CF6;"></div></div>
+            <span class="breakdown-val">Mon-Sun</span>
+            <span class="breakdown-badge">No Overlap</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Row 4: Reproducibility Card (Tested by smoke tests) ── -->
+      <div class="panel-card" id="allCard" style="display:none;">
+        <div class="panel-header">
+          <h3 class="panel-title">Reproducibility Check (All 25 Scenarios)</h3>
+        </div>
+        <p class="stat-card-sub">Runs every scenario against an isolated engine instance and compares results with declared expectations.</p>
+        <div class="tablewrap" id="allWrap"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>/*
+ * Shiftwell swap-rules engine (PROTOTYPE).
+ * Synthetic data only. NOT a production compliance system.
+ *
+ * Design rules:
+ *  - Pure functions: a decision depends only on the request + account policy, never on today's date.
+ *    (Only the audit timestamp uses the clock, and the clock is injectable for tests.)
+ *  - Fail safe: anything missing, malformed or inconsistent can never auto-approve.
+ *  - Hard compliance blocks have no override path.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.ShiftwellEngine = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ---------- date / time helpers (UTC arithmetic, no local-timezone dependence) ----------
+  var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+  var HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+  /** Returns day number (days since 1970-01-01) for a strict, real calendar date, else null. */
+  function dayNumber(s) {
+    if (typeof s !== 'string') return null;
+    var m = ISO_DATE.exec(s);
+    if (!m) return null;
+    var y = +m[1], mo = +m[2], d = +m[3];
+    var t = Date.UTC(y, mo - 1, d);
+    var dt = new Date(t);
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null; // e.g. 2026-02-30
+    return Math.round(t / 86400000);
+  }
+  function dayToISO(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+  /** Monday of the week containing day number n (Monday-to-Sunday weeks). 1970-01-01 was a Thursday. */
+  function weekStartDay(n) { var dow = (n + 3) % 7; /* 0 = Monday */ return n - dow; }
+  function minutesOfDay(s) { var m = typeof s === 'string' ? HHMM.exec(s) : null; return m ? (+m[1]) * 60 + (+m[2]) : null; }
+
+  /** Parses a shift into absolute minutes. Overnight (end < start) rolls into the next day but is
+   *  attributed to the week of the START date. Zero-length or malformed shifts are invalid (null). */
+  function shiftSpan(sh) {
+    if (!sh) return null;
+    var d = dayNumber(sh.date), a = minutesOfDay(sh.start), b = minutesOfDay(sh.end);
+    if (d === null || a === null || b === null || a === b) return null;
+    var dur = b > a ? b - a : b + 1440 - a;
+    var start = d * 1440 + a;
+    return { day: d, start: start, end: start + dur, minutes: dur };
+  }
+
+  function fmtHours(mins) { var h = mins / 60; return (Math.round(h * 100) / 100).toString().replace(/\.0+$/, '') + 'h'; }
+
+  // ---------- findings ----------
+  // severity order (highest first): BLOCK > ESCALATE > REVIEW > PASS
+  var RANK = { BLOCK: 3, ESCALATE: 2, REVIEW: 1, PASS: 0 };
+  function F(rule, severity, code, message) { return { rule: rule, severity: severity, code: code, message: message }; }
+
+  function missingOutcome(policyValue) { // 'BLOCK' | 'ESCALATE' | 'REVIEW'
+    return RANK[policyValue] !== undefined ? policyValue : 'BLOCK';
+  }
+
+  // ---------- rule: role fit ----------
+  function checkRole(policy, employee, shift) {
+    var rule = 'ROLE_FIT';
+    if (!shift || typeof shift.role !== 'string' || !shift.role) return [F(rule, missingOutcome(policy.onMissingQualificationData), 'DATA_MISSING', 'Shift role is missing, so role fit cannot be verified.')];
+    if (!Array.isArray(employee && employee.roles) || employee.roles.length === 0) return [F(rule, missingOutcome(policy.onMissingQualificationData), 'DATA_MISSING', 'Employee role data is missing, so role fit cannot be verified.')];
+    if (employee.roles.indexOf(shift.role) === -1) {
+      return [F(rule, policy.onRoleMismatch, 'ROLE_MISMATCH', 'Employee is a ' + employee.roles.join('/') + '; this shift requires ' + shift.role + '.')];
+    }
+    return [F(rule, 'PASS', 'ROLE_OK', 'Role matches (' + shift.role + ').')];
+  }
+
+  // ---------- rule: qualifications / certificates ----------
+  function requirementsFor(policy, shift) {
+    var map = policy.requiredQualifications || {};
+    var keys = [];
+    if (shift && shift.role && map['role:' + shift.role]) keys = keys.concat(map['role:' + shift.role]);
+    if (shift && shift.station && map['station:' + shift.station]) keys = keys.concat(map['station:' + shift.station]);
+    return keys;
+  }
+
+  function checkQualifications(policy, employee, shift) {
+    var out = [], rule = 'QUALIFICATION';
+    var reqs = requirementsFor(policy, shift);
+    if (reqs.length === 0) return [F(rule, 'PASS', 'NO_REQUIREMENT', 'No qualification required for this role/station under this account\'s policy.')];
+    var missing = missingOutcome(policy.onMissingQualificationData);
+    var shiftDay = dayNumber(shift && shift.date);
+
+    if (!employee || !Array.isArray(employee.qualifications)) {
+      return [F(rule, missing, 'DATA_MISSING', 'Qualification data is not on file for this employee; cannot verify ' + reqs.map(function (r) { return r.label; }).join(', ') + '.')];
+    }
+    if (shiftDay === null) {
+      return [F(rule, missing, 'DATA_MISSING', 'Shift date is missing or invalid, so credential validity on the shift date cannot be verified.')];
+    }
+    reqs.forEach(function (req) {
+      var rec = null;
+      for (var i = 0; i < employee.qualifications.length; i++) if (employee.qualifications[i] && employee.qualifications[i].type === req.type) { rec = employee.qualifications[i]; break; }
+      if (!rec) { out.push(F(rule, policy.onQualificationFailure, 'QUAL_NOT_ON_FILE', req.label + ' is required but no record is on file.')); return; }
+      var hasExpiryField = rec.expires !== undefined && rec.expires !== null;
+      if (req.expiryRequired && !hasExpiryField) { out.push(F(rule, missing, 'EXPIRY_MISSING', req.label + ' has no expiry date recorded; cannot verify it is valid on the shift date.')); return; }
+      if (!hasExpiryField) { out.push(F(rule, 'PASS', 'QUAL_OK', req.label + ' on file (no expiry).')); return; }
+      var expDay = dayNumber(rec.expires);
+      if (expDay === null) { out.push(F(rule, missing, 'EXPIRY_INVALID', req.label + ' expiry date "' + rec.expires + '" is not a valid date; cannot verify.')); return; }
+      var issuedDay = rec.issued ? dayNumber(rec.issued) : null;
+      if (rec.issued && (issuedDay === null || issuedDay >= expDay)) { out.push(F(rule, missing, 'DATES_INCONSISTENT', req.label + ' issue/expiry dates are inconsistent; cannot verify.')); return; }
+      // A credential qualifies only if it expires strictly AFTER the shift date.
+      if (expDay <= shiftDay) {
+        out.push(F(rule, policy.onQualificationFailure, 'QUAL_EXPIRED', req.label + ' ' + (expDay === shiftDay ? 'expires on the shift date (' : 'expired on ') + rec.expires + '; a credential expiring on or before the shift date does not qualify.')); return;
+      }
+      out.push(F(rule, 'PASS', 'QUAL_OK', req.label + ' valid through ' + rec.expires + ' (after shift date ' + shift.date + ').'));
+    });
+    return out;
+  }
+
+  // ---------- rule: weekly hours cap ----------
+  function checkHours(policy, employee, shift, roster) {
+    var rule = 'WEEKLY_HOURS';
+    if (!policy.weeklyHoursCap) return null;
+    var capMin = policy.weeklyHoursCap * 60;
+    var unver = missingOutcome(policy.onMissingHoursData);
+    var span = shiftSpan(shift);
+    if (!span) return { finding: F(rule, unver, 'DATA_MISSING', 'Proposed shift date/time is missing or invalid; weekly hours cannot be verified.') };
+    if (!Array.isArray(roster)) return { finding: F(rule, unver, 'DATA_MISSING', 'Employee\'s rostered hours for the week are unavailable; weekly hours cannot be verified.') };
+
+    var wkStart = weekStartDay(span.day), wkEnd = wkStart + 6;
+    var existing = 0, byLoc = {}, spans = [];
+    for (var i = 0; i < roster.length; i++) {
+      var r = roster[i], rs = shiftSpan(r);
+      if (!rs) return { finding: F(rule, unver, 'DATA_MISSING', 'A rostered shift' + (r && r.id ? ' (' + r.id + ')' : '') + ' has a missing or invalid date/time; weekly hours cannot be verified.') };
+      if (r.id && shift.id && r.id === shift.id) return { finding: F(rule, unver, 'DATA_INCONSISTENT', 'The proposed shift is already on this employee\'s roster; hours would be double counted.') };
+      if (rs.start < span.end && span.start < rs.end) return { finding: F(rule, unver, 'DATA_INCONSISTENT', 'The proposed shift overlaps rostered shift ' + (r.id || '(unnamed)') + '.') };
+      if (rs.day >= wkStart && rs.day <= wkEnd) { // week of the shift's START date
+        existing += rs.minutes; var loc = r.location || 'unknown location'; byLoc[loc] = (byLoc[loc] || 0) + rs.minutes;
+      }
+    }
+    var total = existing + span.minutes;
+    var detail = Object.keys(byLoc).map(function (k) { return k + ' ' + fmtHours(byLoc[k]); });
+    detail.push((shift.location || 'proposed shift') + ' ' + fmtHours(span.minutes) + ' (proposed)');
+    var hours = { weekStart: dayToISO(wkStart), weekEnd: dayToISO(wkEnd), existingMinutes: existing, proposedMinutes: span.minutes, totalMinutes: total, capMinutes: capMin, byLocationMinutes: byLoc, detail: detail };
+    var msg = 'Week ' + hours.weekStart + ' to ' + hours.weekEnd + ' (Mon-Sun), all locations: ' + detail.join(' + ') + ' = ' + fmtHours(total) + ' vs cap ' + policy.weeklyHoursCap + 'h.';
+    if (total > capMin) return { hours: hours, finding: F(rule, missingOutcome(policy.onOverCap || 'ESCALATE'), 'OVER_CAP', msg + ' Exceeds the cap.'), overCap: true };
+    return { hours: hours, finding: F(rule, 'PASS', total === capMin ? 'AT_CAP' : 'UNDER_CAP', msg + (total === capMin ? ' Exactly at the cap: allowed (only hours beyond the cap need approval).' : ' Within the cap.')) };
+  }
+
+  // ---------- approver routing for cap exceptions ----------
+  function routeOvertime(policy, shift) {
+    var region = (policy.locationRegion || {})[shift && shift.location];
+    var ap = region && (policy.regionApprovers || {})[region];
+    if (!ap) return { error: F('APPROVER_ROUTING', 'BLOCK', 'NO_APPROVER', 'Weekly-hours exception needs a named regional approver but none is configured for ' + (shift && shift.location ? shift.location : 'this location') + '. Blocked until an Admin configures one.') };
+    return { approver: { id: ap.id, name: ap.name, role: 'REGIONAL_APPROVER', region: region } };
+  }
+
+  // ---------- engine factory ----------
+  function createEngine(opts) {
+    opts = opts || {};
+    var policies = opts.policies || {};
+    var now = opts.now || function () { return new Date().toISOString(); };
+    var log = [], decisions = {}, seq = 0, logSeq = 0;
+
+    function record(entry) {
+      logSeq += 1;
+      var e = { seq: logSeq, timestamp: now() };
+      for (var k in entry) e[k] = entry[k];
+      log.push(e); return e;
+    }
+
+    function evaluate(req) {
+      req = req || {};
+      var policy = policies[req.account];
+      var action = req.action === 'ASSIGN' ? 'ASSIGN' : 'SWAP';
+      seq += 1;
+      var id = 'D-' + String(seq).padStart(3, '0');
+      var findings = [], hours = null, approver = null;
+
+      if (!policy) {
+        findings.push(F('POLICY', 'BLOCK', 'POLICY_MISSING', 'No policy configured for account "' + req.account + '"; nothing can be approved.'));
+      } else if (!req.employee || !req.shift) {
+        findings.push(F('INPUT', 'BLOCK', 'INPUT_MISSING', 'Employee or shift is missing from the request.'));
+      } else {
+        findings = findings.concat(checkRole(policy, req.employee, req.shift));
+        findings = findings.concat(checkQualifications(policy, req.employee, req.shift));
+        var h = checkHours(policy, req.employee, req.shift, req.roster);
+        if (h) {
+          hours = h.hours || null;
+          findings.push(h.finding);
+          if (h.finding.severity === 'ESCALATE') {
+            var rt = routeOvertime(policy, req.shift);
+            if (rt.error) findings.push(rt.error); else approver = rt.approver;
+          }
+        }
+      }
+
+      var worst = findings.reduce(function (m, f) { return RANK[f.severity] > RANK[m] ? f.severity : m; }, 'PASS');
+      var status;
+      if (worst === 'BLOCK') status = 'BLOCKED';
+      else if (worst === 'ESCALATE') status = 'ESCALATED';
+      else if (worst === 'REVIEW') status = 'MANAGER_REVIEW';
+      else if (action === 'ASSIGN') status = 'ALLOWED';
+      else status = policy.autoApprove ? 'AUTO_APPROVED' : 'READY_FOR_MANAGER';
+      if (status !== 'ESCALATED') approver = null; // only a live escalation has an approver
+
+      var primary = findings.filter(function (f) { return f.severity === worst && worst !== 'PASS'; })[0] ||
+        { rule: 'ALL_CHECKS', code: 'ALL_PASS', message: 'All required qualification, role and hours checks passed.' };
+      var reasonPrefix = {
+        BLOCKED: 'Blocked: ', ESCALATED: 'Escalated: ', MANAGER_REVIEW: 'Needs manager review: ',
+        AUTO_APPROVED: 'Auto-approved: ', READY_FOR_MANAGER: 'Checks passed, manager sign-off required by policy: ', ALLOWED: 'Allowed: '
+      }[status];
+      var decision = {
+        id: id, account: req.account, action: action, status: status,
+        rule: primary.rule + ':' + primary.code, reason: reasonPrefix + primary.message,
+        findings: findings, hours: hours, approver: approver,
+        employeeId: req.employee && req.employee.id, shiftId: req.shift && req.shift.id,
+        canOverride: status !== 'BLOCKED', final: status === 'AUTO_APPROVED' || status === 'ALLOWED' || status === 'BLOCKED' ? true : false,
+        resolution: null
+      };
+      decisions[id] = decision;
+      record({ decisionId: id, event: 'EVALUATED', account: decision.account, action: action, employeeId: decision.employeeId, shiftId: decision.shiftId,
+        outcome: status, rule: decision.rule, reason: decision.reason, actor: 'rules-engine',
+        allRules: findings.map(function (f) { return f.rule + ':' + f.code + ':' + f.severity; }) });
+      return decision;
+    }
+
+    /** Human action on a pending decision. Hard blocks can never be approved; escalations only by the named approver. */
+    function resolve(decisionId, args) {
+      args = args || {};
+      var d = decisions[decisionId], actor = args.actor || {}, outcome = args.outcome, reason = (args.reason || '').trim();
+      function deny(code, msg) {
+        record({ decisionId: decisionId, event: 'ACTION_DENIED', account: d && d.account, action: d && d.action, employeeId: d && d.employeeId, shiftId: d && d.shiftId,
+          outcome: 'DENIED', rule: code, reason: msg, actor: (actor.name || actor.id || 'unknown') + ' [' + (actor.role || 'no role') + ']', attempted: outcome });
+        return { ok: false, code: code, message: msg };
+      }
+      if (!d) return { ok: false, code: 'NOT_FOUND', message: 'Unknown decision.' };
+      if (outcome !== 'APPROVE' && outcome !== 'REJECT') return deny('BAD_OUTCOME', 'Outcome must be APPROVE or REJECT.');
+      if (d.resolution) return deny('ALREADY_RESOLVED', 'Decision already resolved as ' + d.resolution.outcome + '.');
+      if (d.status === 'AUTO_APPROVED' || d.status === 'ALLOWED') return deny('NOTHING_TO_RESOLVE', 'This decision needs no human action.');
+      if (outcome === 'APPROVE') {
+        if (d.status === 'BLOCKED') return deny('HARD_BLOCK_NO_OVERRIDE', 'Hard compliance block cannot be overridden by anyone. Fix the underlying record (e.g. renew the credential, add the data, configure the approver) and re-run the check.');
+        if (d.status === 'ESCALATED') {
+          if (actor.id !== (d.approver && d.approver.id)) return deny('NOT_AUTHORIZED', 'Only the named approver (' + (d.approver && d.approver.name) + ') can approve this weekly-hours exception.');
+          if (!reason) return deny('REASON_REQUIRED', 'A written reason is required to approve a weekly-hours exception.');
+        }
+        if (d.status === 'MANAGER_REVIEW') {
+          if (actor.role !== 'LOCATION_MANAGER') return deny('NOT_AUTHORIZED', 'Only a Location Manager can approve a manual-review item.');
+          if (!reason) return deny('REASON_REQUIRED', 'A written reason is required to approve a manual-review item.');
+        }
+        if (d.status === 'READY_FOR_MANAGER' && actor.role !== 'LOCATION_MANAGER') return deny('NOT_AUTHORIZED', 'Only a Location Manager can approve this swap.');
+      }
+      d.resolution = { outcome: outcome, by: actor.name || actor.id, reason: reason };
+      d.final = true;
+      record({ decisionId: decisionId, event: outcome === 'APPROVE' ? 'APPROVED_BY_HUMAN' : 'REJECTED_BY_HUMAN', account: d.account, action: d.action, employeeId: d.employeeId, shiftId: d.shiftId,
+        outcome: outcome === 'APPROVE' ? 'APPROVED' : 'REJECTED', rule: d.rule, reason: reason || '(no reason given)', actor: (actor.name || actor.id) + ' [' + (actor.role || '') + ']' });
+      return { ok: true, decision: d };
+    }
+
+    return { evaluate: evaluate, resolve: resolve, auditLog: function () { return log.map(function (e) { return JSON.parse(JSON.stringify(e)); }); }, clearLog: function () { log = []; logSeq = 0; }, getDecision: function (id) { return decisions[id]; } };
+  }
+
+  return { createEngine: createEngine, dayNumber: dayNumber, weekStartDay: weekStartDay, dayToISO: dayToISO, shiftSpan: shiftSpan, fmtHours: fmtHours };
+});
+</script>
+<script>/*
+ * SYNTHETIC DATA ONLY. Names, IDs, dates, locations and approvers are invented for the demo.
+ * Account policies below encode the case-study requests plus labelled assumptions.
+ * Reference week used by all scenarios: Mon 2026-11-09 to Sun 2026-11-15 (shift date Thu 2026-11-12).
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.ShiftwellData = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var POLICIES = {
+    CarePoint: {
+      label: 'CarePoint Clinics',
+      source: 'Request (brief): block anyone being scheduled or swapped into a shift if a certificate their role requires has expired. Nurses need valid BLS + nursing council registration.',
+      summary: [
+        'Staff Nurse shifts require BLS and Nursing Council registration, each with an expiry date (from the brief).',
+        'A credential that expires on or before the shift date does not qualify. Applies to BOTH roster assignment and swaps.',
+        'Expired, not on file, role mismatch, or missing/invalid data: hard BLOCK. No override; fix the record and re-run.',
+        'ASSUMPTION: compliant swaps still go to the Location Manager (auto-approval is not switched on for CarePoint).'
+      ],
+      requiredQualifications: {
+        'role:Staff Nurse': [
+          { type: 'BLS', label: 'BLS certificate', expiryRequired: true },
+          { type: 'NURSING_COUNCIL_REG', label: 'Nursing council registration', expiryRequired: true }
+        ]
+      },
+      onQualificationFailure: 'BLOCK', onMissingQualificationData: 'BLOCK', onRoleMismatch: 'BLOCK',
+      weeklyHoursCap: null, autoApprove: false
+    },
+    FreshBowl: {
+      label: 'FreshBowl',
+      source: 'Request (brief): WhatsApp swaps/approvals. Underlying need (interviews): faster approvals; manager only checks station training and overtime.',
+      summary: [
+        'Auto-approve a swap only when role, station training and weekly-hours checks ALL pass.',
+        'Anything else goes to the Location Manager with the reason (not trained, overtime, role mismatch, missing data).',
+        'Missing or unverifiable data never auto-approves; it goes to manual review.',
+        'ASSUMPTIONS: overtime threshold 48h/week (not in brief); station training stored as a non-expiring qualification.'
+      ],
+      requiredQualifications: {
+        'station:Grill': [{ type: 'STATION_GRILL', label: 'Grill station training', expiryRequired: false }]
+      },
+      onQualificationFailure: 'REVIEW', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'REVIEW',
+      weeklyHoursCap: 48, onOverCap: 'REVIEW', onMissingHoursData: 'REVIEW', autoApprove: true
+    },
+    UrbanMart: {
+      label: 'UrbanMart',
+      source: 'Request (brief): any shift that takes someone past 48 hrs/week must need regional manager approval.',
+      summary: [
+        'Weekly hours = all rostered shifts across ALL locations in the Mon-Sun week + the proposed shift.',
+        'More than 48h: escalate to the named regional approver for the shift\'s location. Exactly 48h is allowed.',
+        'Applies to roster assignment and swaps. Unverifiable hours also escalate (fail toward the stricter path).',
+        'No approver configured for the location: BLOCKED until an Admin configures one. Location Managers cannot approve the exception.',
+        'ASSUMPTION: compliant swaps still go to the Location Manager (auto-approval off).'
+      ],
+      requiredQualifications: {},
+      onQualificationFailure: 'REVIEW', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'REVIEW',
+      weeklyHoursCap: 48, onOverCap: 'ESCALATE', onMissingHoursData: 'ESCALATE', autoApprove: false,
+      locationRegion: { 'UM-Patna-03': 'East', 'UM-Ranchi-01': 'East', 'UM-Kolkata-02': 'East', 'UM-Goa-01': 'West' },
+      regionApprovers: { East: { id: 'RA-EAST', name: 'Meera Sen (Regional Manager, East)' } } // West intentionally has none
+    }
+  };
+
+  // ---- builders ----
+  function sh(id, date, start, end, location) { return { id: id, date: date, start: start, end: end, location: location }; }
+  function r8(id, date, location) { return sh(id, date, '09:00', '17:00', location); }
+  function nurse(extra) { var e = { id: 'EMP-1001', name: 'Asha (synthetic)', roles: ['Staff Nurse'] }; for (var k in extra) e[k] = extra[k]; return e; }
+  var CP_SHIFT = { id: 'SH-CP-01', date: '2026-11-12', start: '08:00', end: '16:00', role: 'Staff Nurse', location: 'CP-Clinic-07' };
+  var FB_SHIFT = { id: 'SH-FB-01', date: '2026-11-12', start: '18:00', end: '23:00', role: 'Line Cook', station: 'Grill', location: 'FB-Store-12' };
+  var UM_SHIFT = { id: 'SH-UM-01', date: '2026-11-12', start: '14:00', end: '22:00', role: 'Store Associate', location: 'UM-Patna-03' };
+  var goodQuals = [{ type: 'BLS', expires: '2027-03-31' }, { type: 'NURSING_COUNCIL_REG', expires: '2027-06-30' }];
+  function cook(quals) { return { id: 'EMP-2001', name: 'Ravi (synthetic)', roles: ['Line Cook'], qualifications: quals }; }
+  function assoc() { return { id: 'EMP-3001', name: 'Kiran (synthetic)', roles: ['Store Associate'] }; }
+  function copy(o, patch) { var c = JSON.parse(JSON.stringify(o)); for (var k in patch) c[k] = patch[k]; return c; }
+
+  var SCENARIOS = [
+    // ---------------- CarePoint ----------------
+    { key: 'CP1', account: 'CarePoint', title: 'Valid credentials (swap)', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: nurse({ qualifications: goodQuals }), shift: CP_SHIFT },
+    { key: 'CP2', account: 'CarePoint', title: 'BLS expired (swap)', expect: 'BLOCKED', action: 'SWAP', employee: nurse({ qualifications: [{ type: 'BLS', expires: '2026-10-31' }, goodQuals[1]] }), shift: CP_SHIFT },
+    { key: 'CP3', account: 'CarePoint', title: 'BLS expires ON the shift date (swap)', expect: 'BLOCKED', action: 'SWAP', employee: nurse({ qualifications: [{ type: 'BLS', expires: '2026-11-12' }, goodQuals[1]] }), shift: CP_SHIFT },
+    { key: 'CP4', account: 'CarePoint', title: 'BLS expires the day AFTER the shift (swap)', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: nurse({ qualifications: [{ type: 'BLS', expires: '2026-11-13' }, goodQuals[1]] }), shift: CP_SHIFT },
+    { key: 'CP5', account: 'CarePoint', title: 'Expired BLS, roster assignment (not a swap)', expect: 'BLOCKED', action: 'ASSIGN', employee: nurse({ qualifications: [{ type: 'BLS', expires: '2026-09-01' }, goodQuals[1]] }), shift: CP_SHIFT },
+    { key: 'CP6', account: 'CarePoint', title: 'Role mismatch: Clinic Assistant into nurse shift', expect: 'BLOCKED', action: 'SWAP', employee: { id: 'EMP-1002', name: 'Dev (synthetic)', roles: ['Clinic Assistant'], qualifications: goodQuals }, shift: CP_SHIFT },
+    { key: 'CP7', account: 'CarePoint', title: 'Registration has no expiry date recorded', expect: 'BLOCKED', action: 'SWAP', employee: nurse({ qualifications: [goodQuals[0], { type: 'NURSING_COUNCIL_REG' }] }), shift: CP_SHIFT },
+    { key: 'CP8', account: 'CarePoint', title: 'No qualification data on file at all', expect: 'BLOCKED', action: 'SWAP', employee: nurse({}), shift: CP_SHIFT },
+    { key: 'CP9', account: 'CarePoint', title: 'Shift date missing', expect: 'BLOCKED', action: 'SWAP', employee: nurse({ qualifications: goodQuals }), shift: copy(CP_SHIFT, { date: '' }) },
+    { key: 'CP10', account: 'CarePoint', title: 'Expired BLS, but the role does not require BLS', expect: 'ALLOWED', action: 'ASSIGN', employee: { id: 'EMP-1002', name: 'Dev (synthetic)', roles: ['Clinic Assistant'], qualifications: [{ type: 'BLS', expires: '2026-01-01' }] }, shift: copy(CP_SHIFT, { id: 'SH-CP-02', role: 'Clinic Assistant' }) },
+
+    // ---------------- FreshBowl ----------------
+    { key: 'FB1', account: 'FreshBowl', title: 'Trained, under weekly cap', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'FB-Store-12'), r8('R2', '2026-11-10', 'FB-Store-12'), r8('R3', '2026-11-11', 'FB-Store-12')] },
+    { key: 'FB2', account: 'FreshBowl', title: 'Not trained for the Grill station', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_FRYER' }]), shift: FB_SHIFT, roster: [] },
+    { key: 'FB3', account: 'FreshBowl', title: 'Training data missing', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook(undefined), shift: FB_SHIFT, roster: [] },
+    { key: 'FB4', account: 'FreshBowl', title: 'Exactly 48h this week', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
+      roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '18:00', 'FB-Store-12')] }, // 11+11+11+10 = 43 + 5 = 48
+    { key: 'FB5', account: 'FreshBowl', title: 'Overtime: 49h this week', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
+      roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '19:00', 'FB-Store-12')] }, // 44 + 5 = 49
+    { key: 'FB6', account: 'FreshBowl', title: 'Roster hours unavailable', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT /* roster omitted */ },
+    { key: 'FB7', account: 'FreshBowl', title: 'Role mismatch: Cashier into Line Cook shift', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: { id: 'EMP-2002', name: 'Sana (synthetic)', roles: ['Cashier'], qualifications: [{ type: 'STATION_GRILL' }] }, shift: FB_SHIFT, roster: [] },
+
+    // ---------------- UrbanMart ----------------
+    { key: 'UM1', account: 'UrbanMart', title: 'Below cap: 40h total', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'UM-Patna-03'), r8('R2', '2026-11-10', 'UM-Patna-03'), r8('R3', '2026-11-11', 'UM-Patna-03'), r8('R4', '2026-11-13', 'UM-Patna-03')] },
+    { key: 'UM2', account: 'UrbanMart', title: 'Exactly 48h: allowed', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'UM-Patna-03'), r8('R2', '2026-11-10', 'UM-Patna-03'), r8('R3', '2026-11-11', 'UM-Patna-03'), r8('R4', '2026-11-13', 'UM-Patna-03'), r8('R5', '2026-11-14', 'UM-Patna-03')] }, // 40 + 8
+    { key: 'UM3', account: 'UrbanMart', title: 'Over 48h: 49h, escalate to regional approver', expect: 'ESCALATED', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'UM-Patna-03'), r8('R2', '2026-11-10', 'UM-Patna-03'), r8('R3', '2026-11-11', 'UM-Patna-03'), r8('R4', '2026-11-13', 'UM-Patna-03'), sh('R5', '2026-11-14', '09:00', '18:00', 'UM-Patna-03')] }, // 41 + 8
+    { key: 'UM4', account: 'UrbanMart', title: 'Across two locations: 52h total', expect: 'ESCALATED', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [sh('R1', '2026-11-09', '09:00', '21:00', 'UM-Patna-03'), sh('R2', '2026-11-10', '09:00', '21:00', 'UM-Patna-03'), sh('R3', '2026-11-11', '09:00', '19:00', 'UM-Ranchi-01'), sh('R4', '2026-11-13', '09:00', '19:00', 'UM-Ranchi-01')] }, // 12+12 at Patna, 10+10 at Ranchi = 44 + 8 = 52; Patna alone = 32
+    { key: 'UM5', account: 'UrbanMart', title: 'Neighbouring weeks are not counted', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [sh('P1', '2026-11-08', '08:00', '20:00', 'UM-Patna-03'), r8('R1', '2026-11-09', 'UM-Patna-03'), r8('R2', '2026-11-10', 'UM-Patna-03'), r8('R3', '2026-11-11', 'UM-Patna-03'), r8('R4', '2026-11-13', 'UM-Patna-03'), sh('N1', '2026-11-16', '08:00', '20:00', 'UM-Patna-03')] }, // in-week 32 + 8 = 40; Sun 8th and Mon 16th excluded
+    { key: 'UM6', account: 'UrbanMart', title: 'Roster assignment pushing over 48h', expect: 'ESCALATED', action: 'ASSIGN', employee: assoc(), shift: UM_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'UM-Patna-03'), r8('R2', '2026-11-10', 'UM-Patna-03'), r8('R3', '2026-11-11', 'UM-Patna-03'), r8('R4', '2026-11-13', 'UM-Patna-03'), sh('R5', '2026-11-14', '09:00', '18:00', 'UM-Patna-03')] },
+    { key: 'UM7', account: 'UrbanMart', title: 'A rostered shift has a missing date', expect: 'ESCALATED', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
+      roster: [r8('R1', '2026-11-09', 'UM-Patna-03'), { id: 'R2', date: '', start: '09:00', end: '17:00', location: 'UM-Ranchi-01' }] },
+    { key: 'UM8', account: 'UrbanMart', title: 'Over 48h at a location with no approver configured', expect: 'BLOCKED', action: 'SWAP', employee: assoc(), shift: copy(UM_SHIFT, { location: 'UM-Goa-01' }),
+      roster: [sh('R1', '2026-11-09', '08:00', '20:00', 'UM-Goa-01'), sh('R2', '2026-11-10', '08:00', '20:00', 'UM-Goa-01'), sh('R3', '2026-11-11', '08:00', '20:00', 'UM-Goa-01'), sh('R4', '2026-11-13', '08:00', '20:00', 'UM-Goa-01')] }
+  ];
+
+  return { POLICIES: POLICIES, SCENARIOS: SCENARIOS };
+});
+</script>
+<script>(function () {
+  'use strict';
+  var Engine = window.ShiftwellEngine, Data = window.ShiftwellData;
+  var POLICIES = Data.POLICIES, SCENARIOS = Data.SCENARIOS;
+  var engine = Engine.createEngine({ policies: POLICIES });
+  var account = 'CarePoint', activeKey = null, current = null;
+
+  var LABELS = {
+    BLOCKED: 'BLOCKED',
+    ESCALATED: 'ESCALATED',
+    MANAGER_REVIEW: 'MANAGER REVIEW',
+    AUTO_APPROVED: 'AUTO-APPROVED',
+    READY_FOR_MANAGER: 'READY: MANAGER SIGN-OFF',
+    ALLOWED: 'ALLOWED',
+    APPROVED: 'APPROVED',
+    REJECTED: 'REJECTED',
+    DENIED: 'DENIED'
+  };
+
+  var ICON = {
+    BLOCKED: '⛔ ',
+    ESCALATED: '↑ ',
+    MANAGER_REVIEW: '✋ ',
+    AUTO_APPROVED: '✓ ',
+    READY_FOR_MANAGER: '○ ',
+    ALLOWED: '✓ ',
+    APPROVED: '✓ ',
+    REJECTED: '✕ ',
+    DENIED: '✕ '
+  };
+
+  var ACTORS = {
+    manager: { id: 'LOCATION_MANAGER', name: 'Location Manager', role: 'LOCATION_MANAGER' },
+    admin: { id: 'ADMIN', name: 'Head-office Admin', role: 'ADMIN' }
+  };
+
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (k === 'text') e.textContent = attrs[k];
+        else if (k === 'class') e.className = attrs[k];
+        else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]);
+        else e.setAttribute(k, attrs[k]);
+      }
+    }
+    (children || []).forEach(function (c) {
+      if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return e;
+  }
+
+  function chip(status) {
+    return el('span', { class: 'chip s-' + status, text: (ICON[status] || '') + (LABELS[status] || status) });
+  }
+
+  function clear(n) {
+    while (n.firstChild) n.removeChild(n.firstChild);
+  }
+
+  function hrs(m) {
+    return Engine.fmtHours(m);
+  }
+
+  // ── Stat Cards (Exact match to reference UI mockup) ──
+  function renderStats() {
+    var container = document.getElementById('statsCards');
+    if (!container) return;
+    clear(container);
+
+    var ACCOUNT_META = {
+      CarePoint: { arr: '₹60L', pct24: '71%', health: 'At risk', trendClass: 'positive', rule: 'Cert Expiry Block', ruleSub: 'Hard block • Zero override', locs: '40 clinics' },
+      FreshBowl: { arr: '₹84L', pct24: '38%', health: 'At risk (<50%)', trendClass: 'negative', rule: 'Auto-Approval Engine', ruleSub: 'All checks pass → Instant', locs: '120 restaurants' },
+      UrbanMart: { arr: '₹110L', pct24: '64%', health: 'Healthy (>50%)', trendClass: 'positive', rule: '48h Weekly Cap', ruleSub: 'Named approver: Meera Sen', locs: '200 supermarkets' }
+    };
+    var m = ACCOUNT_META[account] || ACCOUNT_META.CarePoint;
+    var scenCount = SCENARIOS.filter(function (s) { return s.account === account; }).length;
+
+    var cardsData = [
+      {
+        label: 'Account Scenarios',
+        icon: '📋',
+        value: scenCount + ' Tests',
+        trend: '100% Deterministic',
+        trendClass: 'positive',
+        subtext: 'Fixed reproducible test suite'
+      },
+      {
+        label: 'Enforced Rule',
+        icon: '⚖️',
+        value: m.rule,
+        trend: account,
+        trendClass: 'neutral',
+        subtext: m.ruleSub
+      },
+      {
+        label: '24h Approval Rate',
+        icon: '⚡',
+        value: m.pct24,
+        trend: m.health,
+        trendClass: m.trendClass,
+        subtext: 'Historical baseline metric'
+      },
+      {
+        label: 'Account Value & Scale',
+        icon: '🏢',
+        value: m.arr,
+        trend: m.locs,
+        trendClass: 'neutral',
+        subtext: 'Annual recurring revenue'
+      }
+    ];
+
+    cardsData.forEach(function (item) {
+      var card = el('div', { class: 'stat-card' }, [
+        el('div', { class: 'stat-card-header' }, [
+          el('span', { class: 'stat-card-label', text: item.label }),
+          el('span', { class: 'stat-card-icon' }, [document.createTextNode(item.icon)])
+        ]),
+        el('div', { class: 'stat-card-metric-row' }, [
+          el('span', { class: 'stat-card-number', text: item.value }),
+          el('span', { class: 'badge-trend ' + item.trendClass, text: item.trend })
+        ]),
+        el('div', { class: 'stat-card-sub', text: item.subtext })
+      ]);
+      container.appendChild(card);
+    });
+  }
+
+  // ── Tabs (Account Selection) ──
+  function renderTabs() {
+    var t = document.getElementById('tabs');
+    if (!t) return;
+    clear(t);
+
+    var accountIcons = {
+      CarePoint: '🏥',
+      FreshBowl: '🥗',
+      UrbanMart: '🏬'
+    };
+
+    Object.keys(POLICIES).forEach(function (k) {
+      t.appendChild(el('button', {
+        class: 'tab',
+        role: 'tab',
+        'aria-selected': String(k === account),
+        'data-account': k,
+        onclick: function () {
+          account = k;
+          activeKey = null;
+          current = null;
+          renderAll();
+        }
+      }, [
+        el('span', { style: 'font-size:15px;' }, [document.createTextNode(accountIcons[k] || '📁')]),
+        el('span', { text: POLICIES[k].label })
+      ]));
+    });
+  }
+
+  // ── Account Policy ──
+  function renderPolicy() {
+    var p = POLICIES[account];
+    var srcEl = document.getElementById('policySource');
+    if (srcEl) srcEl.textContent = p.source;
+
+    var ul = document.getElementById('policySummary');
+    if (ul) {
+      clear(ul);
+      p.summary.forEach(function (s) {
+        ul.appendChild(el('li', { text: '• ' + s }));
+      });
+    }
+  }
+
+  // ── Scenarios in Sidebar ──
+  function renderScenarios() {
+    var c = document.getElementById('scenarios');
+    if (!c) return;
+    clear(c);
+
+    SCENARIOS.filter(function (s) { return s.account === account; }).forEach(function (s) {
+      c.appendChild(el('button', {
+        class: 'scen',
+        'data-key': s.key,
+        'aria-pressed': String(s.key === activeKey),
+        onclick: function () { runScenario(s.key); }
+      }, [
+        el('strong', { text: s.key + '  ' + s.title }),
+        el('small', { text: (s.action === 'ASSIGN' ? 'Roster assignment' : 'Swap request') + ' • ' + (s.shift && s.shift.date ? s.shift.date : '(date missing)') })
+      ]));
+    });
+  }
+
+  // ── Run Scenario ──
+  function runScenario(key) {
+    var s = SCENARIOS.filter(function (x) { return x.key === key; })[0];
+    if (!s) return;
+    activeKey = key;
+    current = {
+      scenario: s,
+      decision: engine.evaluate({
+        account: s.account,
+        action: s.action,
+        employee: s.employee,
+        shift: s.shift,
+        roster: s.roster
+      }),
+      message: null
+    };
+    renderScenarios();
+    renderResult();
+    renderLog();
+
+    // Scroll smoothly to result card if on small screens
+    var resCard = document.getElementById('resultCard');
+    if (resCard && typeof window !== 'undefined' && window.innerWidth < 900 && typeof resCard.scrollIntoView === 'function') {
+      resCard.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  function inputsTable(s) {
+    var rows = [];
+    var emp = s.employee || {};
+    rows.push(['Employee', (emp.name || emp.id || '?') + ' • roles: ' + (Array.isArray(emp.roles) ? emp.roles.join(', ') : '(missing)')]);
+    rows.push(['Qualifications', Array.isArray(emp.qualifications) ? (emp.qualifications.length ? emp.qualifications.map(function (q) { return q.type + (q.expires ? ' (expires ' + q.expires + ')' : (q.expires === null ? '' : ' (no expiry date recorded)')); }).join('; ') : '(none on file)') : '(qualification data missing)']);
+    var sh = s.shift || {};
+    rows.push(['Proposed shift', (sh.date || '(date missing)') + ' ' + (sh.start || '?') + '-' + (sh.end || '?') + ' • ' + (sh.role || '?') + (sh.station ? ' / ' + sh.station : '') + ' • ' + (sh.location || '?')]);
+    if (POLICIES[s.account].weeklyHoursCap) {
+      rows.push(['Already rostered', s.roster === undefined ? '(roster data unavailable)' : (s.roster.length ? s.roster.map(function (r) { return (r.date || '(no date)') + ' ' + (r.start || '?') + '-' + (r.end || '?') + ' @ ' + (r.location || '?'); }).join(' | ') : 'nothing this week')]);
+    }
+    var t = el('table');
+    var tb = el('tbody');
+    rows.forEach(function (r) {
+      tb.appendChild(el('tr', null, [
+        el('th', { text: r[0], style: 'width:120px;font-size:11.5px;' }),
+        el('td', { text: r[1] })
+      ]));
+    });
+    t.appendChild(tb);
+    return t;
+  }
+
+  function hoursBar(d) {
+    if (!d.hours) return null;
+    var h = d.hours,
+      pct = Math.min(100, Math.round(100 * h.totalMinutes / (h.capMinutes * 1.25))),
+      capPct = Math.round(100 * h.capMinutes / (h.capMinutes * 1.25));
+    var bar = el('div', {
+      class: 'bar' + (h.totalMinutes > h.capMinutes ? ' over' : ''),
+      role: 'img',
+      'aria-label': hrs(h.totalMinutes) + ' of ' + hrs(h.capMinutes) + ' cap'
+    }, [
+      el('i', { style: 'width:' + pct + '%' }),
+      el('span', { class: 'cap', style: 'left:' + capPct + '%' })
+    ]);
+    return el('div', null, [
+      el('div', { text: 'Weekly hours: ' + hrs(h.totalMinutes) + ' (cap ' + hrs(h.capMinutes) + ', week ' + h.weekStart + ' to ' + h.weekEnd + ')', style: 'font-size:12.5px;margin-top:8px;font-weight:500;' }),
+      bar
+    ]);
+  }
+
+  function actBtn(label, cls, fn) {
+    return el('button', { class: 'act ' + (cls || ''), text: label, onclick: fn });
+  }
+
+  function doResolve(actor, outcome) {
+    var reasonInput = document.getElementById('reasonInput');
+    var reason = reasonInput ? reasonInput.value : '';
+    var r = engine.resolve(current.decision.id, { actor: actor, outcome: outcome, reason: reason });
+    current.message = r.ok
+      ? { good: true, text: (outcome === 'APPROVE' ? 'Approved' : 'Rejected') + ' by ' + actor.name + '. Logged.' }
+      : { good: false, text: 'Denied: ' + r.message + ' (logged)' };
+    renderResult();
+    renderLog();
+  }
+
+  function renderActions(d, wrap) {
+    if (d.resolution) {
+      wrap.appendChild(el('div', { class: 'msg good', text: 'Resolved: ' + d.resolution.outcome + ' by ' + d.resolution.by + (d.resolution.reason ? ' — "' + d.resolution.reason + '"' : '') }));
+      return;
+    }
+    if (d.status === 'AUTO_APPROVED' || d.status === 'ALLOWED') {
+      wrap.appendChild(el('p', { class: 'empty', text: 'No human action needed. Every required check passed.' }));
+      return;
+    }
+    var needsReason = d.status === 'ESCALATED' || d.status === 'MANAGER_REVIEW';
+    if (needsReason) {
+      wrap.appendChild(el('input', { type: 'text', id: 'reasonInput', placeholder: 'Reason (required to approve an exception)', 'aria-label': 'Reason' }));
+    }
+    var a = el('div', { class: 'actions' });
+    if (d.status === 'BLOCKED') {
+      a.appendChild(actBtn('Manager tries to approve anyway', 'danger', function () { doResolve(ACTORS.manager, 'APPROVE'); }));
+      a.appendChild(actBtn('Admin tries to approve anyway', 'danger', function () { doResolve(ACTORS.admin, 'APPROVE'); }));
+    } else if (d.status === 'ESCALATED') {
+      a.appendChild(actBtn('Approve as Location Manager', '', function () { doResolve(ACTORS.manager, 'APPROVE'); }));
+      a.appendChild(actBtn('Approve as ' + d.approver.name, 'primary', function () { doResolve({ id: d.approver.id, name: d.approver.name, role: 'REGIONAL_APPROVER' }, 'APPROVE'); }));
+    } else {
+      a.appendChild(actBtn('Approve as Location Manager', 'primary', function () { doResolve(ACTORS.manager, 'APPROVE'); }));
+    }
+    a.appendChild(actBtn('Reject', '', function () { doResolve(ACTORS.manager, 'REJECT'); }));
+    wrap.appendChild(a);
+  }
+
+  function renderResult() {
+    var c = document.getElementById('resultCard');
+    if (!c) return;
+    clear(c);
+
+    c.appendChild(el('div', { class: 'panel-header' }, [
+      el('h3', { class: 'panel-title', text: 'Evaluation Result' })
+    ]));
+
+    if (!current) {
+      c.appendChild(el('p', { class: 'empty', text: 'Choose a scenario on the left to run the rules.' }));
+      return;
+    }
+
+    var d = current.decision, s = current.scenario;
+
+    var headerRow = el('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;' }, [
+      chip(d.status),
+      el('span', { class: 'rule', text: d.id + ' • ' + (d.action === 'ASSIGN' ? 'roster assignment' : 'swap request') })
+    ]);
+    c.appendChild(headerRow);
+
+    c.appendChild(el('p', { id: 'reasonText', style: 'font-size:14px;font-weight:600;margin:6px 0;' }, [document.createTextNode(d.reason)]));
+    c.appendChild(el('div', { class: 'rule', text: 'rule: ' + d.rule }));
+
+    if (d.approver) {
+      c.appendChild(el('div', { class: 'msg bad', text: 'Routed to named approver: ' + d.approver.name + '. Only this person can approve.' }));
+    }
+
+    var hb = hoursBar(d);
+    if (hb) c.appendChild(hb);
+
+    var f = el('div', { style: 'margin-top:12px' });
+    d.findings.forEach(function (x) {
+      f.appendChild(el('div', { class: 'finding' }, [
+        el('span', { class: 'tag t-' + x.severity, text: x.severity }),
+        el('span', { text: x.message })
+      ]));
+    });
+    c.appendChild(el('h4', { text: 'Checks Run', style: 'font-size:12px;font-weight:700;text-transform:uppercase;margin-top:14px;color:var(--muted);' }));
+    c.appendChild(f);
+
+    var act = el('div');
+    renderActions(d, act);
+    if (current.message) {
+      act.appendChild(el('div', { class: 'msg ' + (current.message.good ? 'good' : 'bad'), id: 'actionMsg', text: current.message.text }));
+    }
+    c.appendChild(el('h4', { text: 'Human Actions', style: 'font-size:12px;font-weight:700;text-transform:uppercase;margin-top:14px;color:var(--muted);' }));
+    c.appendChild(act);
+
+    c.appendChild(el('h4', { text: 'Scenario Inputs (synthetic)', style: 'font-size:12px;font-weight:700;text-transform:uppercase;margin-top:14px;color:var(--muted);' }));
+    c.appendChild(inputsTable(s));
+
+    var det = el('details', null, [
+      el('summary', { text: 'Raw input JSON' }),
+      el('pre', { text: JSON.stringify({ account: s.account, action: s.action, employee: s.employee, shift: s.shift, roster: s.roster }, null, 2) })
+    ]);
+    c.appendChild(det);
+  }
+
+  // ── Audit Log ──
+  function renderLog() {
+    var log = engine.auditLog();
+    var tb = document.querySelector('#logTable tbody');
+    if (!tb) return;
+    clear(tb);
+
+    log.slice().reverse().forEach(function (e) {
+      tb.appendChild(el('tr', null, [
+        el('td', { text: String(e.seq) }),
+        el('td', { text: e.timestamp.replace('T', ' ').slice(0, 19) }),
+        el('td', { text: e.account || '' }),
+        el('td', { text: e.event }),
+        el('td', null, [chip(e.outcome)]),
+        el('td', { class: 'rule', text: e.rule }),
+        el('td', { text: e.reason }),
+        el('td', { text: e.actor })
+      ]));
+    });
+
+    var emptyEl = document.getElementById('logEmpty');
+    if (emptyEl) emptyEl.style.display = log.length ? 'none' : '';
+  }
+
+  // ── Run All Scenarios (Reproducibility) ──
+  function runAll() {
+    var eng = Engine.createEngine({
+      policies: POLICIES,
+      now: function () { return '2026-10-17T00:00:00.000Z'; }
+    });
+    var t = el('table', { id: 'allTable' });
+    var head = el('thead', null, [
+      el('tr', null, ['Key', 'Account', 'Scenario', 'Expected', 'Actual', 'Match'].map(function (h) {
+        return el('th', { text: h });
+      }))
+    ]);
+    var body = el('tbody'), pass = 0;
+    SCENARIOS.forEach(function (s) {
+      var d = eng.evaluate({
+        account: s.account,
+        action: s.action,
+        employee: s.employee,
+        shift: s.shift,
+        roster: s.roster
+      });
+      var ok = d.status === s.expect;
+      if (ok) pass++;
+      body.appendChild(el('tr', null, [
+        el('td', { text: s.key }),
+        el('td', { text: s.account }),
+        el('td', { text: s.title }),
+        el('td', null, [chip(s.expect)]),
+        el('td', null, [chip(d.status)]),
+        el('td', { class: ok ? 'ok' : 'no', text: ok ? '✓ yes' : '✕ NO' })
+      ]));
+    });
+    t.appendChild(head);
+    t.appendChild(body);
+
+    var w = document.getElementById('allWrap');
+    if (w) {
+      clear(w);
+      w.appendChild(el('p', {
+        id: 'allSummary',
+        style: 'font-weight:600;margin-bottom:10px;color:#057A55;',
+        text: pass + ' of ' + SCENARIOS.length + ' scenarios match their expected outcome.'
+      }));
+      w.appendChild(t);
+    }
+
+    var allCard = document.getElementById('allCard');
+    if (allCard) {
+      allCard.style.display = '';
+      if (typeof allCard.scrollIntoView === 'function') {
+        allCard.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
+
+  // ── Switch Account (Cycles Accounts) ──
+  function cycleAccount() {
+    var accs = Object.keys(POLICIES);
+    var idx = accs.indexOf(account);
+    account = accs[(idx + 1) % accs.length];
+    activeKey = null;
+    current = null;
+    renderAll();
+  }
+
+  function renderAll() {
+    renderStats();
+    renderTabs();
+    renderPolicy();
+    renderScenarios();
+    renderResult();
+    renderLog();
+  }
+
+  // Wire up action listeners
+  var clearLogBtn = document.getElementById('clearLog');
+  if (clearLogBtn) {
+    clearLogBtn.addEventListener('click', function () {
+      engine.clearLog();
+      renderLog();
+    });
+  }
+
+  var runAllBtn = document.getElementById('runAll');
+  if (runAllBtn) {
+    runAllBtn.addEventListener('click', runAll);
+  }
+
+  var btnToggleAll = document.getElementById('btnToggleAll');
+  if (btnToggleAll) {
+    btnToggleAll.addEventListener('click', runAll);
+  }
+
+  var switchAccountBtn = document.getElementById('switchAccountBtn');
+  if (switchAccountBtn) {
+    switchAccountBtn.addEventListener('click', cycleAccount);
+  }
+
+  // Initial render
+  renderAll();
+})();
+</script>
+</body>
+</html>

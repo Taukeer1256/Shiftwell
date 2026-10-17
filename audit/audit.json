@@ -1,0 +1,185 @@
+{
+ "total_arr_lakh": 408,
+ "total_arr_cr": 4.08,
+ "n_active": 8,
+ "renew_by_jan27": {
+  "accounts": {
+   "FreshBowl": 84,
+   "CarePoint": 60,
+   "FitZone": 22,
+   "Brew & Co": 18
+  },
+  "arr_lakh": 184,
+  "pct": 45.1
+ },
+ "renew_by_dec26": {
+  "accounts": {
+   "CarePoint": 60,
+   "FitZone": 22,
+   "Brew & Co": 18
+  },
+  "arr_lakh": 100,
+  "pct": 24.5
+ },
+ "renew_by_jan27_all_at_risk": true,
+ "lt50_active": {
+  "accounts": {
+   "FreshBowl": 38,
+   "Spice Route": 41,
+   "FitZone": 35,
+   "Brew & Co": 29
+  },
+  "n": 4,
+  "arr_lakh": 160,
+  "pct_of_arr": 39.2
+ },
+ "lt50_lost": {
+  "accounts": {
+   "TandooriTown": 22,
+   "GreenLeaf Salads": 31,
+   "PawsCare Vets": 33
+  },
+  "n": 3,
+  "arr_lakh": 50
+ },
+ "lt50_total_n": 7,
+ "accounts_total_n": 12,
+ "lost_total_lakh": 80,
+ "lost_lt50_share_pct": 62.5,
+ "clinic_diag": {
+  "accounts": [
+   "CarePoint",
+   "MedAxis Labs"
+  ],
+  "arr_lakh": 90,
+  "locations": 65,
+  "pct_of_arr": 22.1
+ },
+ "share_UrbanMart": 27.0,
+ "share_FreshBowl": 20.6,
+ "share_CarePoint": 14.7,
+ "share_top3_requesters": 62.3,
+ "fb_swaps_not_24h": 1798,
+ "fb_swaps_per_location_month": 24.2,
+ "fb_manager_quote_per_location_month_low": 750,
+ "fb_manager_quote_per_location_month_high": 900,
+ "whatsapp_cost": {
+  "2": {
+   "monthly_rs": 2030,
+   "annual_rs": 24360,
+   "pct_of_fb_arr": 0.29
+  },
+  "3": {
+   "monthly_rs": 3045,
+   "annual_rs": 36540,
+   "pct_of_fb_arr": 0.43
+  },
+  "4": {
+   "monthly_rs": 4060,
+   "annual_rs": 48720,
+   "pct_of_fb_arr": 0.58
+  }
+ },
+ "sprints_all_three_as_scoped": 6,
+ "whatsapp_share_of_capacity_pct": 50,
+ "corr_approval_vs_mgr_hours": -0.95,
+ "swaps_per_staff": {
+  "UrbanMart": 0.6,
+  "FreshBowl": 0.81,
+  "CarePoint": 0.34,
+  "QuickKart": 0.48,
+  "Spice Route": 0.93,
+  "MedAxis Labs": 0.2,
+  "FitZone": 0.9,
+  "Brew & Co": 1.17
+ },
+ "carepoint_at_risk_with_pct24": 71,
+ "lost_pct24": {
+  "StyleHub": 60,
+  "TandooriTown": 22,
+  "GreenLeaf Salads": 31,
+  "PawsCare Vets": 33
+ },
+ "accounts": [
+  {
+   "name": "FitZone",
+   "segment": "Gyms",
+   "locations": 50,
+   "arr_lakh": 22,
+   "renewal": "2026-10",
+   "pct24": 35,
+   "mgr_hrs": 5.5,
+   "health": "At risk"
+  },
+  {
+   "name": "Brew & Co",
+   "segment": "Cafes",
+   "locations": 35,
+   "arr_lakh": 18,
+   "renewal": "2026-11",
+   "pct24": 29,
+   "mgr_hrs": 7.0,
+   "health": "At risk"
+  },
+  {
+   "name": "CarePoint",
+   "segment": "Clinics",
+   "locations": 40,
+   "arr_lakh": 60,
+   "renewal": "2026-12",
+   "pct24": 71,
+   "mgr_hrs": 4.0,
+   "health": "At risk"
+  },
+  {
+   "name": "FreshBowl",
+   "segment": "Restaurants",
+   "locations": 120,
+   "arr_lakh": 84,
+   "renewal": "2027-01",
+   "pct24": 38,
+   "mgr_hrs": 6.5,
+   "health": "At risk"
+  },
+  {
+   "name": "MedAxis Labs",
+   "segment": "Diagnostics",
+   "locations": 25,
+   "arr_lakh": 30,
+   "renewal": "2027-02",
+   "pct24": 80,
+   "mgr_hrs": 2.5,
+   "health": "Healthy"
+  },
+  {
+   "name": "Spice Route",
+   "segment": "Restaurants",
+   "locations": 60,
+   "arr_lakh": 36,
+   "renewal": "2027-03",
+   "pct24": 41,
+   "mgr_hrs": 6.0,
+   "health": "Watch"
+  },
+  {
+   "name": "QuickKart",
+   "segment": "Retail",
+   "locations": 90,
+   "arr_lakh": 48,
+   "renewal": "2027-06",
+   "pct24": 67,
+   "mgr_hrs": 3.0,
+   "health": "Healthy"
+  },
+  {
+   "name": "UrbanMart",
+   "segment": "Retail",
+   "locations": 200,
+   "arr_lakh": 110,
+   "renewal": "2027-08",
+   "pct24": 64,
+   "mgr_hrs": 3.5,
+   "health": "Healthy"
+  }
+ ]
+}

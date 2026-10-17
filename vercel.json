@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "cd prototype && node build.js",
+  "outputDirectory": "prototype/dist",
+  "cleanUrls": true,
+  "framework": null
+}

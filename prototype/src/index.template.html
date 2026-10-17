@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiftwell Swap-Rules Engine (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Theme Variables (Inspired by reference UI) ── */
+:root {
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  
+  /* Brand Pink / Magenta from reference */
+  --brand-pink: #FF1E82;
+  --brand-pink-hover: #E0136E;
+  --brand-pink-subtle: #FFF0F6;
+  --brand-pink-border: #FFD6E7;
+  
+  /* Soft pink ambient outer backdrop gradient */
+  --outer-bg: radial-gradient(circle at 50% 15%, #fcd6e5 0%, #fad1e8 30%, #edd4ee 65%, #fbe1ed 100%);
+  
+  /* App surfaces */
+  --app-bg: #FFFFFF;
+  --sidebar-bg: #FFFFFF;
+  --card-bg: #FFFFFF;
+  --card-border: #F1F3F5;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 4px 14px rgba(0,0,0,0.03);
+  --card-hover-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  
+  --ink: #111827;
+  --muted: #6B7280;
+  --light-gray: #9CA3AF;
+  --border-line: #E5E7EB;
+  --border-light: #F9FAFB;
+  
+  /* Semantic Status Badges */
+  --green-bg: #DEF7EC;
+  --green-ink: #03543F;
+  --red-bg: #FDE8E8;
+  --red-ink: #9B1C1C;
+  --blue-bg: #E1EFFE;
+  --blue-ink: #1E429F;
+  --yellow-bg: #FEF08A;
+  --yellow-ink: #854D0E;
+  --orange-bg: #FFEDD5;
+  --orange-ink: #9A3412;
+  
+  --radius-app: 22px;
+  --radius-card: 14px;
+  --radius-btn: 8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { min-height: 100%; }
+body {
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--outer-bg);
+  min-height: 100vh;
+  padding: 24px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select { font: inherit; }
+ul { list-style: none; }
+a { color: var(--brand-pink); text-decoration: none; }
+
+/* ── App Shell Container (Floating SaaS Dashboard Frame) ── */
+.app-container {
+  width: 100%;
+  max-width: 1400px;
+  background: var(--app-bg);
+  border-radius: var(--radius-app);
+  box-shadow: 0 20px 60px rgba(220, 100, 150, 0.16), 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  overflow: hidden;
+  min-height: 900px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  position: relative;
+}
+
+/* ── Sidebar (Reference Layout) ── */
+.sidebar {
+  width: 250px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid #F1F3F5;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.sidebar-header {
+  height: 72px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #F8F9FA;
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-sq {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--brand-pink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(255, 30, 130, 0.3);
+}
+
+.logo-title {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.logo-toggle-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--light-gray);
+  padding: 12px 10px 4px;
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Account selection buttons (tested by .tab) */
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all .15s;
+  text-align: left;
+}
+.tab:hover {
+  background: #F8F9FA;
+  color: var(--ink);
+}
+.tab[aria-selected="true"] {
+  background: var(--brand-pink-subtle);
+  color: var(--brand-pink);
+  font-weight: 600;
+  border: 1px solid var(--brand-pink-border);
+}
+
+/* Scenarios list in sidebar */
+.scen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.scen-list::-webkit-scrollbar { width: 4px; }
+.scen-list::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+
+.scen {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: var(--ink);
+  transition: all .15s;
+}
+.scen:hover { background: #F8F9FA; border-color: #E5E7EB; }
+.scen[aria-pressed="true"] {
+  background: var(--brand-pink-subtle);
+  border-color: var(--brand-pink);
+  color: var(--brand-pink);
+}
+.scen strong { display: block; font-size: 12px; font-weight: 600; }
+.scen small { display: block; font-size: 10.5px; color: var(--muted); }
+
+/* Floating Upgrade / Engine Status Card (From Reference Mockup) */
+.upgrade-card {
+  margin: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FFF6FA 0%, #FFFFFF 100%);
+  border: 1px solid #FFE4F0;
+  box-shadow: 0 4px 14px rgba(255, 30, 130, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.upgrade-icon-sq {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #FF1E82 0%, #FF65A5 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 3px 8px rgba(255, 30, 130, 0.25);
+  flex-shrink: 0;
+}
+.upgrade-info h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.upgrade-info p {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.sidebar-footer {
+  padding: 12px 14px 16px;
+  border-top: 1px solid #F8F9FA;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.disclaimer-box {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+.disclaimer-box strong { display: block; font-size: 10.5px; margin-bottom: 2px; }
+
+/* ── Main Content Area ── */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #FAFBFD;
+}
+
+/* Top bar (Exact Reference Style) */
+.topbar {
+  height: 72px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F1F3F5;
+  flex-shrink: 0;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.topbar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.badge-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #F0F7FF;
+  color: #1D4ED8;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-switch-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all .15s;
+}
+.btn-switch-account:hover {
+  border-color: #D1D5DB;
+  background: #F9FAFB;
+}
+.btn-new-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-btn);
+  background: var(--brand-pink);
+  color: #FFFFFF;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(255, 30, 130, 0.28);
+  transition: all .15s;
+}
+.btn-new-project:hover {
+  background: var(--brand-pink-hover);
+  box-shadow: 0 5px 14px rgba(255, 30, 130, 0.38);
+}
+
+/* ── Content Grid ── */
+.content-body {
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Row 1: 4 Stat Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform .15s, box-shadow .15s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+}
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.stat-card-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.stat-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.stat-card-metric-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.stat-card-number {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.badge-trend {
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-trend.positive { background: var(--green-bg); color: var(--green-ink); }
+.badge-trend.negative { background: var(--red-bg); color: var(--red-ink); }
+.badge-trend.neutral { background: #F3F4F6; color: #4B5563; }
+.stat-card-sub {
+  font-size: 11.5px;
+  color: var(--light-gray);
+}
+
+/* Panels */
+.panel-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pill-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pill-btn:hover { background: #F9FAFB; border-color: #D1D5DB; }
+
+/* ── Evaluation Result (Left 1.6fr) & Account Policy (Right 1fr) ── */
+.row-evaluation-policy {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+}
+
+/* Status Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .02em;
+}
+.s-BLOCKED, .s-DENIED, .s-REJECTED { background: var(--red-bg); color: var(--red-ink); }
+.s-ESCALATED { background: var(--orange-bg); color: var(--orange-ink); }
+.s-MANAGER_REVIEW { background: var(--blue-bg); color: var(--blue-ink); }
+.s-AUTO_APPROVED, .s-ALLOWED, .s-APPROVED { background: var(--green-bg); color: var(--green-ink); }
+.s-READY_FOR_MANAGER { background: #F3F4F6; color: #374151; }
+
+.finding {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #F3F4F6;
+  font-size: 12.5px;
+  line-height: 1.5;
+  align-items: flex-start;
+}
+.finding:first-child { border-top: none; }
+.tag {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  min-width: 74px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.t-PASS { color: var(--green-ink); background: var(--green-bg); }
+.t-BLOCK { color: var(--red-ink); background: var(--red-bg); }
+.t-ESCALATE { color: var(--orange-ink); background: var(--orange-bg); }
+.t-REVIEW { color: var(--blue-ink); background: var(--blue-bg); }
+
+/* Hours progress bar */
+.bar {
+  height: 16px;
+  border-radius: 999px;
+  background: #F3F4F6;
+  position: relative;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3B82F6, var(--brand-pink));
+  transition: width .4s ease;
+}
+.bar.over > i { background: linear-gradient(90deg, #F97316, #EF4444); }
+.cap {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2.5px;
+  background: #111827;
+  border-radius: 2px;
+}
+
+/* Actions buttons */
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+button.act {
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  transition: all .15s;
+}
+button.act:hover { border-color: var(--brand-pink); color: var(--brand-pink); }
+button.act.primary {
+  background: var(--brand-pink);
+  color: #FFFFFF;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(255, 30, 130, 0.25);
+}
+button.act.primary:hover { background: var(--brand-pink-hover); color: #fff; }
+button.act.danger {
+  border-color: #F87171;
+  color: #DC2626;
+}
+button.act.danger:hover { background: #FEF2F2; }
+
+input[type=text] {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-line);
+  background: #FFFFFF;
+  color: var(--ink);
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+input[type=text]:focus {
+  outline: none;
+  border-color: var(--brand-pink);
+  box-shadow: 0 0 0 3px rgba(255, 30, 130, 0.1);
+}
+
+.msg {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.msg.bad { background: var(--red-bg); color: var(--red-ink); }
+.msg.good { background: var(--green-bg); color: var(--green-ink); }
+
+/* 2x2 Metric Grid inside Policy Card */
+.policy-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #F3F4F6;
+}
+.policy-metric-box {
+  background: #FAFBFD;
+  border: 1px solid #F1F3F5;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.policy-metric-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.policy-metric-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.policy-metric-sub {
+  font-size: 10px;
+  color: var(--light-gray);
+}
+
+/* Row: Audit Log & Account Breakdown */
+.row-audit-breakdown {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+}
+
+/* Demographic / Policy Breakdown Progress Bars */
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.breakdown-label {
+  width: 90px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.breakdown-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.breakdown-bar-inner {
+  height: 100%;
+  border-radius: 4px;
+}
+.breakdown-val {
+  width: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+.breakdown-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #057A55;
+  background: var(--green-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Table styling for Audit Log & Reproducibility */
+.tablewrap { overflow-x: auto; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #F3F4F6; vertical-align: top; }
+th {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: #F9FAFB;
+}
+tbody tr:hover { background: #FFF5F9; }
+.rule { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 12.5px; padding: 12px 0; }
+.ok { color: #057A55; font-weight: 700; }
+.no { color: #DC2626; font-weight: 700; }
+
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 500; }
+pre {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 10px;
+  overflow: auto;
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-top: 6px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .row-evaluation-policy { grid-template-columns: 1fr; }
+  .row-audit-breakdown { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  body { padding: 0; }
+  .app-container { border-radius: 0; min-height: 100vh; flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #E5E7EB; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .content-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ── Left Sidebar (Matching Reference Aesthetics) ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-wrap">
+        <div class="logo-sq">S</div>
+        <div class="logo-title">Shiftwell</div>
+      </div>
+      <div class="logo-toggle-icon" title="Swap Rules Prototype">◫</div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-title">Client Accounts</div>
+      <div id="tabs" class="tab-group" role="tablist" aria-label="Account"></div>
+
+      <div class="nav-section-title">Test Scenarios</div>
+      <div id="scenarios" class="scen-list"></div>
+    </div>
+
+    <!-- Status Card (from reference Upgrade card) -->
+    <div class="upgrade-card">
+      <div class="upgrade-icon-sq">🛡️</div>
+      <div class="upgrade-info">
+        <h4>Compliance Engine</h4>
+        <p>Zero Unverified Swaps</p>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <!-- Disclaimer required by tests -->
+      <div id="disclaimer" class="disclaimer-box">
+        <strong>⚠ Synthetic data. Not a production compliance system.</strong>
+        All people, credentials, dates, locations and approvers are invented for this demo. Scenarios are fixed so results are reproducible.
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Dashboard Workspace ── -->
+  <main class="main-wrapper">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Swap-Rules Engine Overview</h1>
+        <div class="badge-updated">
+          <span>🔄</span>
+          <span>DETERMINISTIC EVALUATION</span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn-switch-account" id="switchAccountBtn">
+          <span>⚙️</span>
+          <span>Switch Account</span>
+        </button>
+        <button class="btn-new-project" id="runAll">
+          <span>▶</span>
+          <span>Run All 25 Scenarios</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content-body">
+      <!-- ── Row 1: 4 Stat Cards for Shiftwell ── -->
+      <div class="stats-grid" id="statsCards"></div>
+
+      <!-- ── Row 2: Active Scenario Evaluation & Policy Summary ── -->
+      <div class="row-evaluation-policy">
+        <!-- Result Card (Tested by smoke tests) -->
+        <div class="panel-card" id="resultCard">
+          <div class="panel-header">
+            <h3 class="panel-title">Evaluation Result</h3>
+          </div>
+          <p class="empty">Choose a scenario on the left to run the rules engine.</p>
+        </div>
+
+        <!-- Account Policy Card (Tested by smoke tests) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Account Policy & Enforcement</h3>
+          </div>
+          <p class="stat-card-sub" id="policySource" style="margin-bottom: 10px; color: var(--ink); font-weight: 500;"></p>
+          <ul id="policySummary" style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;"></ul>
+
+          <div class="policy-metrics-grid">
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Execution Speed</div>
+              <div class="policy-metric-val">&lt; 1ms</div>
+              <div class="policy-metric-sub">Pure deterministic logic</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Audit Logging</div>
+              <div class="policy-metric-val">100%</div>
+              <div class="policy-metric-sub">Immutable UTC ledger</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Override Control</div>
+              <div class="policy-metric-val">Strict</div>
+              <div class="policy-metric-sub">Hard block cannot be approved</div>
+            </div>
+            <div class="policy-metric-box">
+              <div class="policy-metric-label">Scope Rule</div>
+              <div class="policy-metric-val">Cross-Store</div>
+              <div class="policy-metric-sub">Hours sum across locations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Row 3: Audit Log Table & Policy Rule Distribution ── -->
+      <div class="row-audit-breakdown">
+        <!-- Live Audit Log Table -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Immutable Audit Log</h3>
+            <button class="pill-btn" id="clearLog">Clear Log</button>
+          </div>
+          <div class="tablewrap">
+            <table id="logTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Timestamp (UTC)</th>
+                  <th>Account</th>
+                  <th>Event</th>
+                  <th>Outcome</th>
+                  <th>Rule</th>
+                  <th>Reason</th>
+                  <th>Actor</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="empty" id="logEmpty">No decisions logged yet. Select a scenario on the left.</p>
+        </div>
+
+        <!-- Rule Distribution (styled like reference Quiz Overview) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Policy Enforcement Matrix</h3>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">CarePoint</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 100%; background: #FF1E82;"></div></div>
+            <span class="breakdown-val">Hard Block</span>
+            <span class="breakdown-badge">Cert Expiry</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">FreshBowl</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 85%; background: #10B981;"></div></div>
+            <span class="breakdown-val">Auto-Approve</span>
+            <span class="breakdown-badge">All Passes</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">UrbanMart</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 70%; background: #F59E0B;"></div></div>
+            <span class="breakdown-val">48h Escalate</span>
+            <span class="breakdown-badge">Multi-Store</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">Role Check</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 90%; background: #3B82F6;"></div></div>
+            <span class="breakdown-val">Strict</span>
+            <span class="breakdown-badge">Qualified</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">Roster Valid</span>
+            <div class="breakdown-bar-wrap"><div class="breakdown-bar-inner" style="width: 95%; background: #8B5CF6;"></div></div>
+            <span class="breakdown-val">Mon-Sun</span>
+            <span class="breakdown-badge">No Overlap</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Row 4: Reproducibility Card (Tested by smoke tests) ── -->
+      <div class="panel-card" id="allCard" style="display:none;">
+        <div class="panel-header">
+          <h3 class="panel-title">Reproducibility Check (All 25 Scenarios)</h3>
+        </div>
+        <p class="stat-card-sub">Runs every scenario against an isolated engine instance and compares results with declared expectations.</p>
+        <div class="tablewrap" id="allWrap"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>/*ENGINE*/</script>
+<script>/*DATA*/</script>
+<script>/*APP*/</script>
+</body>
+</html>
