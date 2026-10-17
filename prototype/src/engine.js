@@ -208,7 +208,7 @@
         AUTO_APPROVED: 'Auto-approved: ', READY_FOR_MANAGER: 'Checks passed, manager sign-off required by policy: ', ALLOWED: 'Allowed: '
       }[status];
       var decision = {
-        id: id, account: req.account, action: action, status: status,
+        id: id, scenarioId: req.scenarioKey || (req.shift && req.shift.id) || null, account: req.account, action: action, status: status,
         rule: primary.rule + ':' + primary.code, reason: reasonPrefix + primary.message,
         findings: findings, hours: hours, approver: approver,
         employeeId: req.employee && req.employee.id, shiftId: req.shift && req.shift.id,
@@ -216,7 +216,7 @@
         resolution: null
       };
       decisions[id] = decision;
-      record({ decisionId: id, event: 'EVALUATED', account: decision.account, action: action, employeeId: decision.employeeId, shiftId: decision.shiftId,
+      record({ decisionId: id, scenarioId: decision.scenarioId, event: 'EVALUATED', account: decision.account, action: action, employeeId: decision.employeeId, shiftId: decision.shiftId,
         outcome: status, rule: decision.rule, reason: decision.reason, actor: 'rules-engine',
         allRules: findings.map(function (f) { return f.rule + ':' + f.code + ':' + f.severity; }) });
       return decision;
@@ -227,7 +227,7 @@
       args = args || {};
       var d = decisions[decisionId], actor = args.actor || {}, outcome = args.outcome, reason = (args.reason || '').trim();
       function deny(code, msg) {
-        record({ decisionId: decisionId, event: 'ACTION_DENIED', account: d && d.account, action: d && d.action, employeeId: d && d.employeeId, shiftId: d && d.shiftId,
+        record({ decisionId: decisionId, scenarioId: d && d.scenarioId, event: 'ACTION_DENIED', account: d && d.account, action: d && d.action, employeeId: d && d.employeeId, shiftId: d && d.shiftId,
           outcome: 'DENIED', rule: code, reason: msg, actor: (actor.name || actor.id || 'unknown') + ' [' + (actor.role || 'no role') + ']', attempted: outcome });
         return { ok: false, code: code, message: msg };
       }
@@ -249,7 +249,7 @@
       }
       d.resolution = { outcome: outcome, by: actor.name || actor.id, reason: reason };
       d.final = true;
-      record({ decisionId: decisionId, event: outcome === 'APPROVE' ? 'APPROVED_BY_HUMAN' : 'REJECTED_BY_HUMAN', account: d.account, action: d.action, employeeId: d.employeeId, shiftId: d.shiftId,
+      record({ decisionId: decisionId, scenarioId: d.scenarioId, event: outcome === 'APPROVE' ? 'APPROVED_BY_HUMAN' : 'REJECTED_BY_HUMAN', account: d.account, action: d.action, employeeId: d.employeeId, shiftId: d.shiftId,
         outcome: outcome === 'APPROVE' ? 'APPROVED' : 'REJECTED', rule: d.rule, reason: reason || '(no reason given)', actor: (actor.name || actor.id) + ' [' + (actor.role || '') + ']' });
       return { ok: true, decision: d };
     }

@@ -762,6 +762,13 @@ pre {
     </div>
 
     <div class="sidebar-footer">
+      <!-- Demo Controls -->
+      <div class="demo-controls-card" style="margin-bottom:8px;padding:9px 11px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;margin-bottom:3px;">Demo Controls</div>
+        <p style="font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.35;">Warning: Resets local demonstration data and in-memory session log.</p>
+        <button class="pill-btn" id="resetDemoBtn" style="width:100%;justify-content:center;font-size:11.5px;padding:5px 8px;background:#FFFFFF;">↺ Reset demo data</button>
+      </div>
+
       <!-- Disclaimer required by tests -->
       <div id="disclaimer" class="disclaimer-box">
         <strong>⚠ Synthetic data. Not a production compliance system.</strong>
@@ -824,7 +831,7 @@ pre {
             <div class="policy-metric-box">
               <div class="policy-metric-label">Audit Logging</div>
               <div class="policy-metric-val">100%</div>
-              <div class="policy-metric-sub">Immutable UTC ledger</div>
+              <div class="policy-metric-sub">UTC Event Ledger</div>
             </div>
             <div class="policy-metric-box">
               <div class="policy-metric-label">Override Control</div>
@@ -842,11 +849,13 @@ pre {
 
       <!-- ── Row 3: Audit Log Table & Policy Rule Distribution ── -->
       <div class="row-audit-breakdown">
-        <!-- Live Audit Log Table -->
+        <!-- Live Audit Log Table (Read-Only) -->
         <div class="panel-card">
-          <div class="panel-header">
-            <h3 class="panel-title">Immutable Audit Log</h3>
-            <button class="pill-btn" id="clearLog">Clear Log</button>
+          <div class="panel-header" style="margin-bottom:12px;">
+            <div>
+              <h3 class="panel-title">Audit Log</h3>
+              <p class="stat-card-sub" style="font-size:11px;color:var(--muted);margin-top:2px;">Read-only event history for this demo. Production audit integrity requires server-side storage and access controls.</p>
+            </div>
           </div>
           <div class="tablewrap">
             <table id="logTable">
@@ -855,6 +864,7 @@ pre {
                   <th>#</th>
                   <th>Timestamp (UTC)</th>
                   <th>Account</th>
+                  <th>Request ID</th>
                   <th>Event</th>
                   <th>Outcome</th>
                   <th>Rule</th>
@@ -1128,7 +1138,7 @@ pre {
         AUTO_APPROVED: 'Auto-approved: ', READY_FOR_MANAGER: 'Checks passed, manager sign-off required by policy: ', ALLOWED: 'Allowed: '
       }[status];
       var decision = {
-        id: id, account: req.account, action: action, status: status,
+        id: id, scenarioId: req.scenarioKey || (req.shift && req.shift.id) || null, account: req.account, action: action, status: status,
         rule: primary.rule + ':' + primary.code, reason: reasonPrefix + primary.message,
         findings: findings, hours: hours, approver: approver,
         employeeId: req.employee && req.employee.id, shiftId: req.shift && req.shift.id,
@@ -1136,7 +1146,7 @@ pre {
         resolution: null
       };
       decisions[id] = decision;
-      record({ decisionId: id, event: 'EVALUATED', account: decision.account, action: action, employeeId: decision.employeeId, shiftId: decision.shiftId,
+      record({ decisionId: id, scenarioId: decision.scenarioId, event: 'EVALUATED', account: decision.account, action: action, employeeId: decision.employeeId, shiftId: decision.shiftId,
         outcome: status, rule: decision.rule, reason: decision.reason, actor: 'rules-engine',
         allRules: findings.map(function (f) { return f.rule + ':' + f.code + ':' + f.severity; }) });
       return decision;
@@ -1147,7 +1157,7 @@ pre {
       args = args || {};
       var d = decisions[decisionId], actor = args.actor || {}, outcome = args.outcome, reason = (args.reason || '').trim();
       function deny(code, msg) {
-        record({ decisionId: decisionId, event: 'ACTION_DENIED', account: d && d.account, action: d && d.action, employeeId: d && d.employeeId, shiftId: d && d.shiftId,
+        record({ decisionId: decisionId, scenarioId: d && d.scenarioId, event: 'ACTION_DENIED', account: d && d.account, action: d && d.action, employeeId: d && d.employeeId, shiftId: d && d.shiftId,
           outcome: 'DENIED', rule: code, reason: msg, actor: (actor.name || actor.id || 'unknown') + ' [' + (actor.role || 'no role') + ']', attempted: outcome });
         return { ok: false, code: code, message: msg };
       }
@@ -1169,7 +1179,7 @@ pre {
       }
       d.resolution = { outcome: outcome, by: actor.name || actor.id, reason: reason };
       d.final = true;
-      record({ decisionId: decisionId, event: outcome === 'APPROVE' ? 'APPROVED_BY_HUMAN' : 'REJECTED_BY_HUMAN', account: d.account, action: d.action, employeeId: d.employeeId, shiftId: d.shiftId,
+      record({ decisionId: decisionId, scenarioId: d.scenarioId, event: outcome === 'APPROVE' ? 'APPROVED_BY_HUMAN' : 'REJECTED_BY_HUMAN', account: d.account, action: d.action, employeeId: d.employeeId, shiftId: d.shiftId,
         outcome: outcome === 'APPROVE' ? 'APPROVED' : 'REJECTED', rule: d.rule, reason: reason || '(no reason given)', actor: (actor.name || actor.id) + ' [' + (actor.role || '') + ']' });
       return { ok: true, decision: d };
     }
@@ -1507,7 +1517,8 @@ pre {
         action: s.action,
         employee: s.employee,
         shift: s.shift,
-        roster: s.roster
+        roster: s.roster,
+        scenarioKey: s.key
       }),
       message: null
     };
@@ -1673,10 +1684,12 @@ pre {
     clear(tb);
 
     log.slice().reverse().forEach(function (e) {
+      var reqLabel = e.scenarioId ? (e.scenarioId + ' (' + e.decisionId + ')') : (e.decisionId || '');
       tb.appendChild(el('tr', null, [
         el('td', { text: String(e.seq) }),
         el('td', { text: e.timestamp.replace('T', ' ').slice(0, 19) }),
         el('td', { text: e.account || '' }),
+        el('td', { class: 'rule', text: reqLabel }),
         el('td', { text: e.event }),
         el('td', null, [chip(e.outcome)]),
         el('td', { class: 'rule', text: e.rule }),
@@ -1764,11 +1777,13 @@ pre {
   }
 
   // Wire up action listeners
-  var clearLogBtn = document.getElementById('clearLog');
-  if (clearLogBtn) {
-    clearLogBtn.addEventListener('click', function () {
+  var resetDemoBtn = document.getElementById('resetDemoBtn');
+  if (resetDemoBtn) {
+    resetDemoBtn.addEventListener('click', function () {
       engine.clearLog();
-      renderLog();
+      activeKey = null;
+      current = null;
+      renderAll();
     });
   }
 

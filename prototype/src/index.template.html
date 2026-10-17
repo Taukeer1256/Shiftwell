@@ -762,6 +762,13 @@ pre {
     </div>
 
     <div class="sidebar-footer">
+      <!-- Demo Controls -->
+      <div class="demo-controls-card" style="margin-bottom:8px;padding:9px 11px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;margin-bottom:3px;">Demo Controls</div>
+        <p style="font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.35;">Warning: Resets local demonstration data and in-memory session log.</p>
+        <button class="pill-btn" id="resetDemoBtn" style="width:100%;justify-content:center;font-size:11.5px;padding:5px 8px;background:#FFFFFF;">↺ Reset demo data</button>
+      </div>
+
       <!-- Disclaimer required by tests -->
       <div id="disclaimer" class="disclaimer-box">
         <strong>⚠ Synthetic data. Not a production compliance system.</strong>
@@ -824,7 +831,7 @@ pre {
             <div class="policy-metric-box">
               <div class="policy-metric-label">Audit Logging</div>
               <div class="policy-metric-val">100%</div>
-              <div class="policy-metric-sub">Immutable UTC ledger</div>
+              <div class="policy-metric-sub">UTC Event Ledger</div>
             </div>
             <div class="policy-metric-box">
               <div class="policy-metric-label">Override Control</div>
@@ -842,11 +849,13 @@ pre {
 
       <!-- ── Row 3: Audit Log Table & Policy Rule Distribution ── -->
       <div class="row-audit-breakdown">
-        <!-- Live Audit Log Table -->
+        <!-- Live Audit Log Table (Read-Only) -->
         <div class="panel-card">
-          <div class="panel-header">
-            <h3 class="panel-title">Immutable Audit Log</h3>
-            <button class="pill-btn" id="clearLog">Clear Log</button>
+          <div class="panel-header" style="margin-bottom:12px;">
+            <div>
+              <h3 class="panel-title">Audit Log</h3>
+              <p class="stat-card-sub" style="font-size:11px;color:var(--muted);margin-top:2px;">Read-only event history for this demo. Production audit integrity requires server-side storage and access controls.</p>
+            </div>
           </div>
           <div class="tablewrap">
             <table id="logTable">
@@ -855,6 +864,7 @@ pre {
                   <th>#</th>
                   <th>Timestamp (UTC)</th>
                   <th>Account</th>
+                  <th>Request ID</th>
                   <th>Event</th>
                   <th>Outcome</th>
                   <th>Rule</th>

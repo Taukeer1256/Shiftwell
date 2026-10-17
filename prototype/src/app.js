@@ -204,7 +204,8 @@
         action: s.action,
         employee: s.employee,
         shift: s.shift,
-        roster: s.roster
+        roster: s.roster,
+        scenarioKey: s.key
       }),
       message: null
     };
@@ -370,10 +371,12 @@
     clear(tb);
 
     log.slice().reverse().forEach(function (e) {
+      var reqLabel = e.scenarioId ? (e.scenarioId + ' (' + e.decisionId + ')') : (e.decisionId || '');
       tb.appendChild(el('tr', null, [
         el('td', { text: String(e.seq) }),
         el('td', { text: e.timestamp.replace('T', ' ').slice(0, 19) }),
         el('td', { text: e.account || '' }),
+        el('td', { class: 'rule', text: reqLabel }),
         el('td', { text: e.event }),
         el('td', null, [chip(e.outcome)]),
         el('td', { class: 'rule', text: e.rule }),
@@ -461,11 +464,13 @@
   }
 
   // Wire up action listeners
-  var clearLogBtn = document.getElementById('clearLog');
-  if (clearLogBtn) {
-    clearLogBtn.addEventListener('click', function () {
+  var resetDemoBtn = document.getElementById('resetDemoBtn');
+  if (resetDemoBtn) {
+    resetDemoBtn.addEventListener('click', function () {
       engine.clearLog();
-      renderLog();
+      activeKey = null;
+      current = null;
+      renderAll();
     });
   }
 

@@ -108,8 +108,19 @@ test('reproducibility table: all scenarios match their expected outcome', () => 
   assert.equal(doc.querySelectorAll('#logTable tbody tr').length, 0); // separate engine instance
 });
 
-test('clear log empties the audit table', () => {
+test('audit log is read-only with no clear button; demo controls reset demo data', () => {
   const { doc } = load();
-  click(doc, '.scen[data-key="CP1"]'); click(doc, '#clearLog');
+  assert.equal(doc.querySelector('.row-audit-breakdown #clearLog'), null);
+  assert.equal(doc.querySelector('#clearLog'), null);
+  assert.match(text(doc, '.row-audit-breakdown'), /Read-only event history for this demo/);
+
+  click(doc, '.scen[data-key="CP1"]');
+  assert.equal(doc.querySelectorAll('#logTable tbody tr').length, 1);
+  assert.match(text(doc, '#logTable tbody'), /CP1/);
+
+  const resetBtn = doc.querySelector('#resetDemoBtn');
+  assert.ok(resetBtn);
+  assert.match(resetBtn.textContent, /Reset demo data/);
+  resetBtn.click();
   assert.equal(doc.querySelectorAll('#logTable tbody tr').length, 0);
 });
