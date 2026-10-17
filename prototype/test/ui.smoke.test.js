@@ -87,6 +87,18 @@ test('FreshBowl: auto-approval and missing-data review render correctly', () => 
   assert.match(text(doc, '#reasonText'), /not on file/);
 });
 
+test('FreshBowl: confirmed training mismatch (FB2) is BLOCKED and override is denied', () => {
+  const { doc } = load();
+  click(doc, '.tab[data-account="FreshBowl"]');
+  click(doc, '.scen[data-key="FB2"]');
+  assert.match(text(doc, '#resultCard .chip'), /BLOCKED/);
+  assert.match(text(doc, '#reasonText'), /Grill station training is required/);
+  const btn = [...doc.querySelectorAll('button.act')].find((b) => /Manager tries to approve anyway/.test(b.textContent));
+  btn.click();
+  assert.match(text(doc, '#actionMsg'), /cannot be overridden/);
+  assert.match(text(doc, '#logTable tbody'), /HARD_BLOCK_NO_OVERRIDE/);
+});
+
 test('reproducibility table: all scenarios match their expected outcome', () => {
   const { doc } = load();
   click(doc, '#runAll');

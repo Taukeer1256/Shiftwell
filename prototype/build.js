@@ -8,5 +8,5 @@ let html = src('index.template.html')
   .replace('/*DATA*/', () => src('scenarios.js'))
   .replace('/*APP*/', () => src('app.js'));
 fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
-fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), html);
+fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), html, 'utf8');
 console.log('built dist/index.html (' + html.length + ' bytes)');

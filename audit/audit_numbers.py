@@ -89,5 +89,6 @@ r["carepoint_at_risk_with_pct24"] = active["CarePoint"][6]
 r["lost_pct24"] = {k:v[4] for k,v in lost.items()}
 
 r["accounts"] = sorted([{"name":k,"segment":v[0],"locations":v[1],"arr_lakh":v[2],"renewal":v[3],"pct24":v[6],"mgr_hrs":v[7],"health":v[8]} for k,v in active.items()], key=lambda a:a["renewal"])
-json.dump(r, open("/home/claude/shiftwell/audit/audit.json","w"), indent=1, ensure_ascii=False)
+import os
+json.dump(r, open(os.path.join(os.path.dirname(__file__), "audit.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
 print(json.dumps(r, indent=1, ensure_ascii=False))

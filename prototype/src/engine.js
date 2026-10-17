@@ -78,16 +78,17 @@
 
   function checkQualifications(policy, employee, shift) {
     var out = [], rule = 'QUALIFICATION';
-    var reqs = requirementsFor(policy, shift);
-    if (reqs.length === 0) return [F(rule, 'PASS', 'NO_REQUIREMENT', 'No qualification required for this role/station under this account\'s policy.')];
     var missing = missingOutcome(policy.onMissingQualificationData);
     var shiftDay = dayNumber(shift && shift.date);
 
-    if (!employee || !Array.isArray(employee.qualifications)) {
-      return [F(rule, missing, 'DATA_MISSING', 'Qualification data is not on file for this employee; cannot verify ' + reqs.map(function (r) { return r.label; }).join(', ') + '.')];
-    }
     if (shiftDay === null) {
       return [F(rule, missing, 'DATA_MISSING', 'Shift date is missing or invalid, so credential validity on the shift date cannot be verified.')];
+    }
+    var reqs = requirementsFor(policy, shift);
+    if (reqs.length === 0) return [F(rule, 'PASS', 'NO_REQUIREMENT', 'No qualification required for this role/station under this account\'s policy.')];
+
+    if (!employee || !Array.isArray(employee.qualifications)) {
+      return [F(rule, missing, 'DATA_MISSING', 'Qualification data is not on file for this employee; cannot verify ' + reqs.map(function (r) { return r.label; }).join(', ') + '.')];
     }
     reqs.forEach(function (req) {
       var rec = null;
@@ -176,6 +177,10 @@
       } else {
         findings = findings.concat(checkRole(policy, req.employee, req.shift));
         findings = findings.concat(checkQualifications(policy, req.employee, req.shift));
+        var span = shiftSpan(req.shift);
+        if (!span && !findings.some(function (f) { return f.code === 'DATA_MISSING'; })) {
+          findings.push(F('INPUT', missingOutcome(policy.onMissingQualificationData), 'DATA_MISSING', 'Shift start/end time is missing, malformed, or zero-duration; shift cannot be verified.'));
+        }
         var h = checkHours(policy, req.employee, req.shift, req.roster);
         if (h) {
           hours = h.hours || null;

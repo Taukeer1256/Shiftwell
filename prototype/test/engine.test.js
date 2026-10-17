@@ -146,8 +146,23 @@ test('FreshBowl: auto-approves only when every check passes', () => {
   assert.equal(run(mk(), 'FB4').status, 'AUTO_APPROVED'); // exactly 48h
   assert.equal(run(mk(), 'FB1').resolution, null);
 });
-test('FreshBowl: untrained, missing data, overtime, role mismatch, missing roster -> manager review (never auto)', () => {
-  for (const k of ['FB2', 'FB3', 'FB5', 'FB6', 'FB7']) assert.equal(run(mk(), k).status, 'MANAGER_REVIEW', k);
+test('FreshBowl: confirmed role/training mismatch is BLOCKED (hard block)', () => {
+  const d2 = run(mk(), 'FB2');
+  assert.equal(d2.status, 'BLOCKED');
+  assert.ok(hasCode(d2, 'QUAL_NOT_ON_FILE'));
+
+  const d7 = run(mk(), 'FB7');
+  assert.equal(d7.status, 'BLOCKED');
+  assert.ok(hasCode(d7, 'ROLE_MISMATCH'));
+});
+test('FreshBowl: missing data, overtime, missing roster -> manager review (never auto)', () => {
+  for (const k of ['FB3', 'FB5', 'FB6']) assert.equal(run(mk(), k).status, 'MANAGER_REVIEW', k);
+});
+test('FreshBowl: confirmed mismatch hard block cannot be overridden by manager or admin', () => {
+  const eng = mk();
+  const d = run(eng, 'FB2');
+  assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: 'override' }).code, 'HARD_BLOCK_NO_OVERRIDE');
+  assert.equal(eng.resolve(d.id, { actor: { id: 'ADM', name: 'Head Office', role: 'ADMIN' }, outcome: 'APPROVE', reason: 'override' }).code, 'HARD_BLOCK_NO_OVERRIDE');
 });
 
 // ---- no scenario ever auto-approves with a failing or unverifiable check ----
@@ -212,13 +227,42 @@ test('anyone may reject a blocked/escalated request (safe direction)', () => {
   assert.equal(eng.resolve(d.id, { actor: { id: 'LM-1', name: 'Mgr', role: 'LOCATION_MANAGER' }, outcome: 'REJECT', reason: 'noted' }).ok, true);
 });
 test('manager review: manager can approve with a reason; reason is mandatory', () => {
-  const eng = mk(); const d = run(eng, 'FB2');
+  const eng = mk(); const d = run(eng, 'FB3');
   assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE' }).code, 'REASON_REQUIRED');
-  assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: 'trained last week, record pending' }).ok, true);
+  assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: 'training record verified manually on paper' }).ok, true);
 });
 test('auto-approved decision needs no human action', () => {
   const eng = mk(); const d = run(eng, 'FB1');
   assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE' }).code, 'NOTHING_TO_RESOLVE');
+});
+test('safety invariant: missing shift dates, missing roster hours, and invalid inputs never auto-approve', () => {
+  const eng = mk();
+  const s1 = scen('FB1');
+  // Missing shift date
+  const d1 = eng.evaluate({ account: 'FreshBowl', action: 'SWAP', employee: s1.employee, shift: Object.assign({}, s1.shift, { date: '' }), roster: s1.roster });
+  assert.notEqual(d1.status, 'AUTO_APPROVED');
+  assert.notEqual(d1.status, 'ALLOWED');
+
+  // Invalid calendar date
+  const d2 = eng.evaluate({ account: 'FreshBowl', action: 'SWAP', employee: s1.employee, shift: Object.assign({}, s1.shift, { date: '2026-02-30' }), roster: s1.roster });
+  assert.notEqual(d2.status, 'AUTO_APPROVED');
+  assert.notEqual(d2.status, 'ALLOWED');
+
+  // Missing roster hours on account with weekly hours cap
+  const d3 = eng.evaluate({ account: 'FreshBowl', action: 'SWAP', employee: s1.employee, shift: s1.shift });
+  assert.notEqual(d3.status, 'AUTO_APPROVED');
+  assert.notEqual(d3.status, 'ALLOWED');
+  assert.equal(d3.status, 'MANAGER_REVIEW');
+
+  // Missing employee roles
+  const d4 = eng.evaluate({ account: 'FreshBowl', action: 'SWAP', employee: { id: 'EMP-99', roles: [] }, shift: s1.shift, roster: s1.roster });
+  assert.notEqual(d4.status, 'AUTO_APPROVED');
+  assert.notEqual(d4.status, 'ALLOWED');
+
+  // Zero-length or malformed shift time
+  const d5 = eng.evaluate({ account: 'FreshBowl', action: 'SWAP', employee: s1.employee, shift: Object.assign({}, s1.shift, { start: '08:00', end: '08:00' }), roster: s1.roster });
+  assert.notEqual(d5.status, 'AUTO_APPROVED');
+  assert.notEqual(d5.status, 'ALLOWED');
 });
 
 // ---- audit log ----

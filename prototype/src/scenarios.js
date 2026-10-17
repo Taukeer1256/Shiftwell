@@ -14,10 +14,10 @@
       label: 'CarePoint Clinics',
       source: 'Request (brief): block anyone being scheduled or swapped into a shift if a certificate their role requires has expired. Nurses need valid BLS + nursing council registration.',
       summary: [
-        'Staff Nurse shifts require BLS and Nursing Council registration, each with an expiry date (from the brief).',
-        'A credential that expires on or before the shift date does not qualify. Applies to BOTH roster assignment and swaps.',
-        'Expired, not on file, role mismatch, or missing/invalid data: hard BLOCK. No override; fix the record and re-run.',
-        'ASSUMPTION: compliant swaps still go to the Location Manager (auto-approval is not switched on for CarePoint).'
+        'FACT (Brief): Staff Nurse shifts require BLS and Nursing Council registration, each with an expiry date.',
+        'FACT (Brief): A credential that expires on or before the shift date does not qualify. Applies to BOTH roster assignment and swaps.',
+        'FACT (Brief): Expired, missing, invalid, or role-mismatched mandatory credentials must be hard-blocked. Zero override.',
+        'ASSUMPTION: Compliant CarePoint swaps still require Location Manager sign-off (auto-approval is disabled).'
       ],
       requiredQualifications: {
         'role:Staff Nurse': [
@@ -32,26 +32,25 @@
       label: 'FreshBowl',
       source: 'Request (brief): WhatsApp swaps/approvals. Underlying need (interviews): faster approvals; manager only checks station training and overtime.',
       summary: [
-        'Auto-approve a swap only when role, station training and weekly-hours checks ALL pass.',
-        'Anything else goes to the Location Manager with the reason (not trained, overtime, role mismatch, missing data).',
-        'Missing or unverifiable data never auto-approves; it goes to manual review.',
-        'ASSUMPTIONS: overtime threshold 48h/week (not in brief); station training stored as a non-expiring qualification.'
+        'FACT (Brief): Auto-approve a swap only when role, station training, and weekly-hours checks ALL pass.',
+        'FACT (Brief): Confirmed employee role or station training mismatch must be BLOCKED (hard safety block, no override).',
+        'FACT (Brief): Missing or unverifiable training data or roster hours routes to manual manager review (never auto-approves).',
+        'ASSUMPTION: Overtime threshold is 48h/week; station training stored as a non-expiring qualification.'
       ],
       requiredQualifications: {
         'station:Grill': [{ type: 'STATION_GRILL', label: 'Grill station training', expiryRequired: false }]
       },
-      onQualificationFailure: 'REVIEW', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'REVIEW',
+      onQualificationFailure: 'BLOCK', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'BLOCK',
       weeklyHoursCap: 48, onOverCap: 'REVIEW', onMissingHoursData: 'REVIEW', autoApprove: true
     },
     UrbanMart: {
       label: 'UrbanMart',
       source: 'Request (brief): any shift that takes someone past 48 hrs/week must need regional manager approval.',
       summary: [
-        'Weekly hours = all rostered shifts across ALL locations in the Mon-Sun week + the proposed shift.',
-        'More than 48h: escalate to the named regional approver for the shift\'s location. Exactly 48h is allowed.',
-        'Applies to roster assignment and swaps. Unverifiable hours also escalate (fail toward the stricter path).',
-        'No approver configured for the location: BLOCKED until an Admin configures one. Location Managers cannot approve the exception.',
-        'ASSUMPTION: compliant swaps still go to the Location Manager (auto-approval off).'
+        'FACT (Brief): Weekly hours calculated across ALL store locations in the Mon-Sun week + the proposed shift.',
+        'FACT (Brief): More than 48h requires regional manager approval. Exactly 48h does not trigger the past-48-hours rule.',
+        'FACT (Brief): Applies to both roster assignment and swaps. Unverifiable hours escalate to regional approver.',
+        'ASSUMPTION: No approver configured for location hard-blocks until configured. Compliant swaps need Location Manager sign-off.'
       ],
       requiredQualifications: {},
       onQualificationFailure: 'REVIEW', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'REVIEW',
@@ -89,14 +88,14 @@
     // ---------------- FreshBowl ----------------
     { key: 'FB1', account: 'FreshBowl', title: 'Trained, under weekly cap', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [r8('R1', '2026-11-09', 'FB-Store-12'), r8('R2', '2026-11-10', 'FB-Store-12'), r8('R3', '2026-11-11', 'FB-Store-12')] },
-    { key: 'FB2', account: 'FreshBowl', title: 'Not trained for the Grill station', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_FRYER' }]), shift: FB_SHIFT, roster: [] },
+    { key: 'FB2', account: 'FreshBowl', title: 'Not trained for the Grill station', expect: 'BLOCKED', action: 'SWAP', employee: cook([{ type: 'STATION_FRYER' }]), shift: FB_SHIFT, roster: [] },
     { key: 'FB3', account: 'FreshBowl', title: 'Training data missing', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook(undefined), shift: FB_SHIFT, roster: [] },
     { key: 'FB4', account: 'FreshBowl', title: 'Exactly 48h this week', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '18:00', 'FB-Store-12')] }, // 11+11+11+10 = 43 + 5 = 48
     { key: 'FB5', account: 'FreshBowl', title: 'Overtime: 49h this week', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '19:00', 'FB-Store-12')] }, // 44 + 5 = 49
     { key: 'FB6', account: 'FreshBowl', title: 'Roster hours unavailable', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT /* roster omitted */ },
-    { key: 'FB7', account: 'FreshBowl', title: 'Role mismatch: Cashier into Line Cook shift', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: { id: 'EMP-2002', name: 'Sana (synthetic)', roles: ['Cashier'], qualifications: [{ type: 'STATION_GRILL' }] }, shift: FB_SHIFT, roster: [] },
+    { key: 'FB7', account: 'FreshBowl', title: 'Role mismatch: Cashier into Line Cook shift', expect: 'BLOCKED', action: 'SWAP', employee: { id: 'EMP-2002', name: 'Sana (synthetic)', roles: ['Cashier'], qualifications: [{ type: 'STATION_GRILL' }] }, shift: FB_SHIFT, roster: [] },
 
     // ---------------- UrbanMart ----------------
     { key: 'UM1', account: 'UrbanMart', title: 'Below cap: 40h total', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
