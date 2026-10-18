@@ -70,7 +70,7 @@
 
     var ACCOUNT_META = {
       CarePoint: { arr: '₹60L', pct24: '71%', health: 'At risk', trendClass: 'positive', rule: 'Cert Expiry Block', ruleSub: 'Hard block • Zero override', locs: '40 clinics' },
-      FreshBowl: { arr: '₹84L', pct24: '38%', health: 'At risk (<50%)', trendClass: 'negative', rule: 'Auto-Approval & Block', ruleSub: 'Role/training mismatch: Block', locs: '120 restaurants' },
+      FreshBowl: { arr: '₹84L', pct24: '38%', health: 'At risk (<50%)', trendClass: 'negative', rule: 'Auto-Approval & Review', ruleSub: 'Role/training mismatch: Review', locs: '120 restaurants' },
       UrbanMart: { arr: '₹110L', pct24: '64%', health: 'Healthy (>50%)', trendClass: 'positive', rule: '48h Weekly Cap', ruleSub: 'Named approver: Meera Sen', locs: '200 supermarkets' }
     };
     var m = ACCOUNT_META[account] || ACCOUNT_META.CarePoint;
@@ -80,8 +80,8 @@
       {
         label: 'Account Scenarios',
         icon: '📋',
-        value: scenCount + ' Tests',
-        trend: '100% Deterministic',
+        value: scenCount + ' scenarios',
+        trend: 'Fixed scenarios',
         trendClass: 'positive',
         subtext: 'Fixed reproducible test suite'
       },

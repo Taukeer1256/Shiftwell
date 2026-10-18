@@ -87,16 +87,40 @@ test('FreshBowl: auto-approval and missing-data review render correctly', () => 
   assert.match(text(doc, '#reasonText'), /not on file/);
 });
 
-test('FreshBowl: confirmed training mismatch (FB2) is BLOCKED and override is denied', () => {
+test('FreshBowl: training mismatch (FB2) shows MANAGER REVIEW, approving needs reason', () => {
   const { doc } = load();
   click(doc, '.tab[data-account="FreshBowl"]');
   click(doc, '.scen[data-key="FB2"]');
-  assert.match(text(doc, '#resultCard .chip'), /BLOCKED/);
+  assert.match(text(doc, '#resultCard .chip'), /MANAGER REVIEW/);
   assert.match(text(doc, '#reasonText'), /Grill station training is required/);
-  const btn = [...doc.querySelectorAll('button.act')].find((b) => /Manager tries to approve anyway/.test(b.textContent));
-  btn.click();
-  assert.match(text(doc, '#actionMsg'), /cannot be overridden/);
-  assert.match(text(doc, '#logTable tbody'), /HARD_BLOCK_NO_OVERRIDE/);
+  const mgr = [...doc.querySelectorAll('button.act')].find((b) => /Approve as Location Manager/.test(b.textContent));
+  mgr.click();
+  assert.match(text(doc, '#actionMsg'), /written reason is required/);
+  doc.querySelector('#reasonInput').value = 'Station supervisor assigned for shift';
+  mgr.click();
+  assert.match(text(doc, '#resultCard'), /Resolved: APPROVE/);
+  assert.match(text(doc, '#logTable tbody'), /APPROVED_BY_HUMAN/);
+});
+
+test('FreshBowl: role mismatch (FB7) shows MANAGER REVIEW', () => {
+  const { doc } = load();
+  click(doc, '.tab[data-account="FreshBowl"]');
+  click(doc, '.scen[data-key="FB7"]');
+  assert.match(text(doc, '#resultCard .chip'), /MANAGER REVIEW/);
+  assert.match(text(doc, '#reasonText'), /requires Line Cook/);
+});
+
+test('unverified claims removed and relabeled in UI', () => {
+  const { doc } = load();
+  assert.doesNotMatch(doc.body.textContent, /Execution Speed/);
+  assert.doesNotMatch(doc.body.textContent, /Pure deterministic logic/);
+  assert.doesNotMatch(doc.body.textContent, /Zero Unverified Swaps/);
+  assert.doesNotMatch(doc.body.textContent, /100% Deterministic/);
+  assert.match(doc.body.textContent, /Fail-safe on missing data/);
+  assert.match(doc.body.textContent, /Evaluation: Synchronous, in-browser/);
+  assert.match(doc.body.textContent, /Audit log: Every decision recorded \(this session\)/);
+  assert.match(doc.body.textContent, /Fixed scenarios/);
+  assert.match(text(doc, '#statsCards'), /10 scenarios/);
 });
 
 test('reproducibility table: all scenarios match their expected outcome', () => {

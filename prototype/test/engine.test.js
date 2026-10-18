@@ -146,23 +146,25 @@ test('FreshBowl: auto-approves only when every check passes', () => {
   assert.equal(run(mk(), 'FB4').status, 'AUTO_APPROVED'); // exactly 48h
   assert.equal(run(mk(), 'FB1').resolution, null);
 });
-test('FreshBowl: confirmed role/training mismatch is BLOCKED (hard block)', () => {
+test('FreshBowl: training mismatch (FB2) and role mismatch (FB7) route to manager review', () => {
   const d2 = run(mk(), 'FB2');
-  assert.equal(d2.status, 'BLOCKED');
+  assert.equal(d2.status, 'MANAGER_REVIEW');
   assert.ok(hasCode(d2, 'QUAL_NOT_ON_FILE'));
 
   const d7 = run(mk(), 'FB7');
-  assert.equal(d7.status, 'BLOCKED');
+  assert.equal(d7.status, 'MANAGER_REVIEW');
   assert.ok(hasCode(d7, 'ROLE_MISMATCH'));
 });
 test('FreshBowl: missing data, overtime, missing roster -> manager review (never auto)', () => {
-  for (const k of ['FB3', 'FB5', 'FB6']) assert.equal(run(mk(), k).status, 'MANAGER_REVIEW', k);
+  for (const k of ['FB2', 'FB3', 'FB5', 'FB6', 'FB7']) assert.equal(run(mk(), k).status, 'MANAGER_REVIEW', k);
 });
-test('FreshBowl: confirmed mismatch hard block cannot be overridden by manager or admin', () => {
+test('FreshBowl: manager review requires written reason to approve', () => {
   const eng = mk();
   const d = run(eng, 'FB2');
-  assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: 'override' }).code, 'HARD_BLOCK_NO_OVERRIDE');
-  assert.equal(eng.resolve(d.id, { actor: { id: 'ADM', name: 'Head Office', role: 'ADMIN' }, outcome: 'APPROVE', reason: 'override' }).code, 'HARD_BLOCK_NO_OVERRIDE');
+  assert.equal(eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: '' }).code, 'REASON_REQUIRED');
+  const res = eng.resolve(d.id, { actor: { id: 'LM-2', name: 'FB Mgr', role: 'LOCATION_MANAGER' }, outcome: 'APPROVE', reason: 'Supervisor oversight assigned' });
+  assert.equal(res.ok, true);
+  assert.equal(res.decision.resolution.outcome, 'APPROVE');
 });
 
 // ---- no scenario ever auto-approves with a failing or unverifiable check ----

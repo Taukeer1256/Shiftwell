@@ -33,14 +33,14 @@
       source: 'Request (brief): WhatsApp swaps/approvals. Underlying need (interviews): faster approvals; manager only checks station training and overtime.',
       summary: [
         'FACT (Brief): Auto-approve a swap only when role, station training, and weekly-hours checks ALL pass.',
-        'FACT (Brief): Confirmed employee role or station training mismatch must be BLOCKED (hard safety block, no override).',
+        'FACT (Brief): Confirmed employee role or station training mismatch routes to manual manager review (never a hard block).',
         'FACT (Brief): Missing or unverifiable training data or roster hours routes to manual manager review (never auto-approves).',
         'ASSUMPTION: Overtime threshold is 48h/week; station training stored as a non-expiring qualification.'
       ],
       requiredQualifications: {
         'station:Grill': [{ type: 'STATION_GRILL', label: 'Grill station training', expiryRequired: false }]
       },
-      onQualificationFailure: 'BLOCK', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'BLOCK',
+      onQualificationFailure: 'REVIEW', onMissingQualificationData: 'REVIEW', onRoleMismatch: 'REVIEW',
       weeklyHoursCap: 48, onOverCap: 'REVIEW', onMissingHoursData: 'REVIEW', autoApprove: true
     },
     UrbanMart: {
@@ -88,14 +88,14 @@
     // ---------------- FreshBowl ----------------
     { key: 'FB1', account: 'FreshBowl', title: 'Trained, under weekly cap', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [r8('R1', '2026-11-09', 'FB-Store-12'), r8('R2', '2026-11-10', 'FB-Store-12'), r8('R3', '2026-11-11', 'FB-Store-12')] },
-    { key: 'FB2', account: 'FreshBowl', title: 'Not trained for the Grill station', expect: 'BLOCKED', action: 'SWAP', employee: cook([{ type: 'STATION_FRYER' }]), shift: FB_SHIFT, roster: [] },
+    { key: 'FB2', account: 'FreshBowl', title: 'Not trained for the Grill station', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_FRYER' }]), shift: FB_SHIFT, roster: [] },
     { key: 'FB3', account: 'FreshBowl', title: 'Training data missing', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook(undefined), shift: FB_SHIFT, roster: [] },
     { key: 'FB4', account: 'FreshBowl', title: 'Exactly 48h this week', expect: 'AUTO_APPROVED', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '18:00', 'FB-Store-12')] }, // 11+11+11+10 = 43 + 5 = 48
     { key: 'FB5', account: 'FreshBowl', title: 'Overtime: 49h this week', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT,
       roster: [sh('R1', '2026-11-09', '08:00', '19:00', 'FB-Store-12'), sh('R2', '2026-11-10', '08:00', '19:00', 'FB-Store-12'), sh('R3', '2026-11-11', '08:00', '19:00', 'FB-Store-12'), sh('R4', '2026-11-13', '08:00', '19:00', 'FB-Store-12')] }, // 44 + 5 = 49
     { key: 'FB6', account: 'FreshBowl', title: 'Roster hours unavailable', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: cook([{ type: 'STATION_GRILL' }]), shift: FB_SHIFT /* roster omitted */ },
-    { key: 'FB7', account: 'FreshBowl', title: 'Role mismatch: Cashier into Line Cook shift', expect: 'BLOCKED', action: 'SWAP', employee: { id: 'EMP-2002', name: 'Sana (synthetic)', roles: ['Cashier'], qualifications: [{ type: 'STATION_GRILL' }] }, shift: FB_SHIFT, roster: [] },
+    { key: 'FB7', account: 'FreshBowl', title: 'Role mismatch: Cashier into Line Cook shift', expect: 'MANAGER_REVIEW', action: 'SWAP', employee: { id: 'EMP-2002', name: 'Sana (synthetic)', roles: ['Cashier'], qualifications: [{ type: 'STATION_GRILL' }] }, shift: FB_SHIFT, roster: [] },
 
     // ---------------- UrbanMart ----------------
     { key: 'UM1', account: 'UrbanMart', title: 'Below cap: 40h total', expect: 'READY_FOR_MANAGER', action: 'SWAP', employee: assoc(), shift: UM_SHIFT,
